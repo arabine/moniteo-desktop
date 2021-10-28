@@ -129,6 +129,7 @@ endif()
 target_include_directories(
     ${MANOLAB_PROJECT}
     PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/asio
     /usr/include/SDL2
     ${CMAKE_CURRENT_SOURCE_DIR}/gl3w
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui

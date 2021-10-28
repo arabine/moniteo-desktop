@@ -90,6 +90,10 @@ public:
     bool GetTableEntry(const std::string &name, uint32_t line, std::vector<Value> &columns);
     uint32_t GetTableSize(const std::string &name);
 
+    void SetDeviceValue(const std::string &name, const std::string &key, const Value &value);
+    void SaveConfigFile();
+
+    Value GetDeviceValue(const std::string &name, const std::string &key);
 private:
     PluginController mPlugins;
     JSEngine mJsEngine;

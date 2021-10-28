@@ -10,6 +10,7 @@
 #include "Settings.h"
 #include "TableWindow.h"
 #include "CourseWindow.h"
+#include "Pool.h"
 
 class MainWindow
 {
@@ -37,6 +38,10 @@ private:
     char mBufSendPath[200];
     char mBufPort[10];
 
+    int octets[4];
+
+    thread_pool mPool;
+
     std::string mServerAddr;
     std::string mServerRecUrl;
     std::string mServerSndUrl;
@@ -50,6 +55,7 @@ private:
     void EngineEvents(int signal, const std::vector<Value> &args);
     void ShowOptionsWindow();
     bool ShowQuitConfirm();
+    bool ExecutePing(const std::string &host);
 };
 
 #endif // MAINWINDOW_H

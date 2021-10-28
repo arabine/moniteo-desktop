@@ -6,7 +6,7 @@
 #include "JsonReader.h"
 #include "ProcessEngine.h"
 #include "Util.h"
-
+#include "JsonWriter.h"
 
 #ifndef EXE_NAME
     #define EXE_NAME "manolab"
@@ -353,6 +353,62 @@ uint32_t ProcessEngine::GetTableSize(const std::string &name)
     }
 
     return lines;
+}
+/*****************************************************************************/
+void ProcessEngine::SetDeviceValue(const std::string &name, const std::string &key, const Value &value)
+{
+    // FIXME: patch pour PierOBois, le rendre plus générique
+    for (auto &d : mDevices)
+    {
+        d.conn_channel = value.GetString();
+    }
+}
+/*****************************************************************************/
+Value ProcessEngine::GetDeviceValue(const std::string &name, const std::string &key)
+{
+    Value val;
+    // FIXME: patch pour PierOBois, le rendre plus générique
+    for (auto &d : mDevices)
+    {
+        val = Value(d.conn_channel);
+    }
+
+    return val;
+}
+/*****************************************************************************/
+void ProcessEngine::SaveConfigFile()
+{
+    // FIXME: patch pour PierOBois, le rendre plus générique
+    if (mDevices.size() > 0)
+    {
+
+        std::string templateConf = R"(function setup()
+        {
+            return {
+            admin_pass: "caravane",
+            devices: [
+            {
+                name: "nfc_reader", // Ne pas changer
+                type: "Zebra7500", // Ne pas changer
+                conn_channel: ")";
+         std::string templateEnd = R"(",
+                conn_settings: "",  // Ne pas changer
+                id: "",   // Ne pas changer
+                options: ""  // Ne pas changer
+            }
+            ]};
+        })";
+
+        std::ofstream f;
+        f.open(mCurrentConfig, std::ios_base::out | std::ios_base::binary);
+
+        if (f.is_open())
+        {
+            f << templateConf << mDevices.at(0).conn_channel << templateEnd << std::endl;
+            f.close();
+        }
+    }
+
 }
 /*****************************************************************************/
 void ProcessEngine::LoadScript(const std::string &fileName)
@@ -909,6 +965,12 @@ void ProcessEngine::Run()
 
             if (IsLoaded())
             {
+                if (mEventCallback)
+                {
+                    std::vector<Value> args;
+                    mEventCallback(Event::SIG_LOADED, args);
+                }
+
                 if (InitializeScriptContext())
                 {
                     TLogInfo("Script loaded");
@@ -928,7 +990,7 @@ void ProcessEngine::Run()
                     if (mEventCallback)
                     {
                         std::vector<Value> args;
-                        mEventCallback(Event::SIG_LOADED, args);
+                        mEventCallback(Event::SIG_STARTUP, args);
                     }
                 }
             }

@@ -49,6 +49,7 @@ public:
         SIG_TEST_ERROR,
         SIG_TEST_FINISHED,
         SIG_LOADED,
+        SIG_STARTUP,
         SIG_MESSAGE,
         SIG_INPUT_TEXT,
         SIG_AUTO_TEST_FINISHED,

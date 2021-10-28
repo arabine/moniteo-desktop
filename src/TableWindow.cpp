@@ -236,7 +236,7 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
     if (ImGui::BeginTable("table1", 3, tableFlags))
     {
         ImGui::TableSetupColumn("Dossard", ImGuiTableColumnFlags_WidthFixed);
-        ImGui::TableSetupColumn("Tours", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Passages", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("Temps", ImGuiTableColumnFlags_WidthStretch);
 
         ImGui::TableHeadersRow();
