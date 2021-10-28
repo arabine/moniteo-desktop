@@ -1,2 +1,7 @@
-# moniteo-desktop
-Desktop tool for Moniteo
+# Moniteo
+
+Logiciel de gestion sportive :
+* Chronométrage de course
+
+
+

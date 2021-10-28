@@ -1,0 +1,8 @@
+{
+    "autoload":"test_zebra7500.js",
+    "autorun":true,
+    "plugins":[
+        "zebrafx7500"
+        ],
+    "workspace":"/home/anthony/git/moniteo-desktop/delivery/workspace"
+    }
