@@ -8,11 +8,13 @@
 #include <mutex>
 #include "Util.h"
 #include "DurationTimer.h"
+//#include "Pool.h"
 
 class TableWindow
 {
 public:
     TableWindow();
+    ~TableWindow();
     void Draw(const char *title, bool *p_open, IProcessEngine& engine);
 
     void ParseAction(const std::vector<Value> &args);
@@ -67,6 +69,7 @@ private:
     uint16_t mPort;
 
     DurationTimer timer;
+//    thread_pool mPool;
 
     std::vector<Value> mCatLabels;
     // clé: nom catégorie

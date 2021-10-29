@@ -8,6 +8,10 @@
 
 #include <random>
 
+#include "thread_pool.hpp"
+
+static thread_pool pool;
+
 TableWindow::TableWindow()
 {
     timer.reset();
@@ -58,6 +62,11 @@ TableWindow::TableWindow()
     }
 
     */
+}
+
+TableWindow::~TableWindow()
+{
+    pool.reset();
 }
 
 void TableWindow::RefreshWindowParameter()
@@ -163,11 +172,27 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
         mSendToCloud = true;
     }
 
+    static bool sendInAction = false;
+
     /* ======================  Envoi dans le Cloud ====================== */
     if (ImGui::Button( "Envoyer", ImVec2(100, 40)) || mSendToCloud)
     {
+
         mSendToCloud = false;
-        SendToServer(ToJson(table, startTime), mServer, mPath, mPort);
+        if (!sendInAction)
+        {
+            sendInAction = true;
+
+            pool.push_task([&] () {
+          //  mPool.enqueue_task([&] () {
+                mMutex.lock();
+                std::map<int64_t, Entry> tableCopy = mTable;
+                mMutex.unlock();
+
+               SendToServer(ToJson(tableCopy, startTime), mServer, mPath, mPort);
+               sendInAction = false;
+            });
+        }
     }
 
     ImGui::Text("Tags : %d", static_cast<int>(table.size()));

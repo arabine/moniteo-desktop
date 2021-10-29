@@ -9,139 +9,21 @@
 #include "asio.hpp"
 #include "Value.h"
 
+#ifdef USE_WINDOWS_OS
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <icmpapi.h>
+#include <stdio.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+#endif
+
 static const char gDefaultAddress[] = "moniteo.io";
 static const char gDefaulPort[] = "80";
 static const char gDefaultReceivePath[] = "/api/v1/data/uplink";
 static const char gDefaultSendPath[] = "/api/v1/data/downlink";
 
-
-#include <istream>
-#include <iostream>
-#include <ostream>
-
-#include "icmp_header.hpp"
-#include "ipv4_header.hpp"
-
-namespace chrono = asio::chrono;
-using asio::steady_timer;
-
-class pinger
-{
-public:
-  pinger(asio::io_context& io_context, const char* destination)
-    : resolver_(io_context), socket_(io_context, asio::ip::icmp::v4()),
-      timer_(io_context), sequence_number_(0), num_replies_(0)
-  {
-    destination_ = *resolver_.resolve(asio::ip::icmp::v4(), destination, "").begin();
-
-    start_send();
-    start_receive();
-  }
-
-private:
-  void start_send()
-  {
-    std::string body("\"Hello!\" from Asio ping.");
-
-    // Create an ICMP header for an echo request.
-    icmp_header echo_request;
-    echo_request.type(icmp_header::echo_request);
-    echo_request.code(0);
-    echo_request.identifier(get_identifier());
-    echo_request.sequence_number(++sequence_number_);
-    compute_checksum(echo_request, body.begin(), body.end());
-
-    // Encode the request packet.
-    asio::streambuf request_buffer;
-    std::ostream os(&request_buffer);
-    os << echo_request << body;
-
-    // Send the request.
-    time_sent_ = steady_timer::clock_type::now();
-    socket_.send_to(request_buffer.data(), destination_);
-
-    // Wait up to five seconds for a reply.
-    num_replies_ = 0;
-    timer_.expires_at(time_sent_ + chrono::seconds(5));
-    timer_.async_wait(std::bind(&pinger::handle_timeout, this));
-  }
-
-  void handle_timeout()
-  {
-    if (num_replies_ == 0)
-      std::cout << "Request timed out" << std::endl;
-
-    // Requests must be sent no less than one second apart.
-    timer_.expires_at(time_sent_ + chrono::seconds(1));
-    timer_.async_wait(std::bind(&pinger::start_send, this));
-  }
-
-  void start_receive()
-  {
-    // Discard any data already in the buffer.
-    reply_buffer_.consume(reply_buffer_.size());
-
-    // Wait for a reply. We prepare the buffer to receive up to 64KB.
-    socket_.async_receive(reply_buffer_.prepare(65536),
-        std::bind(&pinger::handle_receive, this, std::placeholders::_2));
-  }
-
-  void handle_receive(std::size_t length)
-  {
-    // The actual number of bytes received is committed to the buffer so that we
-    // can extract it using a std::istream object.
-    reply_buffer_.commit(length);
-
-    // Decode the reply packet.
-    std::istream is(&reply_buffer_);
-    ipv4_header ipv4_hdr;
-    icmp_header icmp_hdr;
-    is >> ipv4_hdr >> icmp_hdr;
-
-    // We can receive all ICMP packets received by the host, so we need to
-    // filter out only the echo replies that match the our identifier and
-    // expected sequence number.
-    if (is && icmp_hdr.type() == icmp_header::echo_reply
-          && icmp_hdr.identifier() == get_identifier()
-          && icmp_hdr.sequence_number() == sequence_number_)
-    {
-      // If this is the first reply, interrupt the five second timeout.
-      if (num_replies_++ == 0)
-        timer_.cancel();
-
-      // Print out some information about the reply packet.
-      chrono::steady_clock::time_point now = chrono::steady_clock::now();
-      chrono::steady_clock::duration elapsed = now - time_sent_;
-      std::cout << length - ipv4_hdr.header_length()
-        << " bytes from " << ipv4_hdr.source_address()
-        << ": icmp_seq=" << icmp_hdr.sequence_number()
-        << ", ttl=" << ipv4_hdr.time_to_live()
-        << ", time="
-        << chrono::duration_cast<chrono::milliseconds>(elapsed).count()
-        << std::endl;
-    }
-
-    start_receive();
-  }
-
-  static unsigned short get_identifier()
-  {
-#if defined(ASIO_WINDOWS)
-    return static_cast<unsigned short>(::GetCurrentProcessId());
-#else
-    return static_cast<unsigned short>(::getpid());
-#endif
-  }
-
-  asio::ip::icmp::resolver resolver_;
-  asio::ip::icmp::endpoint destination_;
-  asio::ip::icmp::socket socket_;
-  steady_timer timer_;
-  unsigned short sequence_number_;
-  chrono::steady_clock::time_point time_sent_;
-  asio::streambuf reply_buffer_;
-  std::size_t num_replies_;
-};
 
 
 MainWindow::MainWindow()
@@ -165,8 +47,72 @@ MainWindow::~MainWindow()
     mEngine.Quit();
 }
 
+#ifdef USE_WINDOWS_OS
+bool ExecuteWindowsPing(const std::string &host)
+{
+    HANDLE hIcmpFile;
+   unsigned long ipaddr = INADDR_NONE;
+   DWORD dwRetVal = 0;
+   char SendData[32] = "Data Buffer";
+   LPVOID ReplyBuffer = NULL;
+   DWORD ReplySize = 0;
+
+   ipaddr = inet_addr(host.c_str());
+   if (ipaddr == INADDR_NONE) {
+       printf("usage: %s IP address\n", host.c_str());
+       return false;
+   }
+
+   hIcmpFile = IcmpCreateFile();
+   if (hIcmpFile == INVALID_HANDLE_VALUE) {
+       printf("\tUnable to open handle.\n");
+       printf("IcmpCreatefile returned error: %ld\n", GetLastError() );
+       return false;
+   }
+
+   ReplySize = sizeof(ICMP_ECHO_REPLY) + sizeof(SendData);
+   ReplyBuffer = (VOID*) malloc(ReplySize);
+   if (ReplyBuffer == NULL) {
+       printf("\tUnable to allocate memory\n");
+       return false;
+   }
+
+
+   dwRetVal = IcmpSendEcho(hIcmpFile, ipaddr, SendData, sizeof(SendData),
+       NULL, ReplyBuffer, ReplySize, 1000);
+   if (dwRetVal != 0) {
+       PICMP_ECHO_REPLY pEchoReply = (PICMP_ECHO_REPLY)ReplyBuffer;
+       struct in_addr ReplyAddr;
+       ReplyAddr.S_un.S_addr = pEchoReply->Address;
+       printf("\tSent icmp message to %s\n", host.c_str());
+       if (dwRetVal > 1) {
+           printf("\tReceived %ld icmp message responses\n", dwRetVal);
+           printf("\tInformation from the first response:\n");
+       }
+       else {
+           printf("\tReceived %ld icmp message response\n", dwRetVal);
+           printf("\tInformation from this response:\n");
+       }
+       printf("\t  Received from %s\n", inet_ntoa( ReplyAddr ) );
+       printf("\t  Status = %ld\n",
+           pEchoReply->Status);
+       printf("\t  Roundtrip time = %ld milliseconds\n",
+           pEchoReply->RoundTripTime);
+   }
+   else {
+       printf("\tCall to IcmpSendEcho failed.\n");
+       printf("\tIcmpSendEcho returned error: %ld\n", GetLastError() );
+       return false;
+   }
+   return true;
+}
+#endif
+
 bool MainWindow::ExecutePing(const std::string &host)
 {
+#ifdef USE_WINDOWS_OS
+    return ExecuteWindowsPing(host);
+#else
     int x = system("ping -c1 -s1 192.168.1.240  > /dev/null 2>&1");
     if (x==0){
         std::cout<<"success"<<std::endl;
@@ -175,20 +121,7 @@ bool MainWindow::ExecutePing(const std::string &host)
         std::cout<<"failed"<<std::endl;
         return false;
     }
-
-    /*
-    try
-      {
-
-        asio::io_context io_context;
-        pinger p(io_context, host.c_str());
-        io_context.run();
-      }
-      catch (std::exception& e)
-      {
-        std::cerr << "Exception: " << e.what() << std::endl;
-      }
-      */
+#endif
 }
 
 void MainWindow::SetupMainMenuBar()
@@ -366,10 +299,10 @@ void MainWindow::ShowOptionsWindow()
         // Example action button and way to build the IP string
         ImGui::SameLine();
         if (ImGui::Button("Test")) {
-            std::stringstream ip;
-            ip << octets[0] << "." << octets[1] << "." << octets[2] << "." << octets[3];
 
             mPool.enqueue_work([&] {
+                std::stringstream ip;
+                ip << octets[0] << "." << octets[1] << "." << octets[2] << "." << octets[3];
                 if (pingState == 1)
                 {
                     return;
