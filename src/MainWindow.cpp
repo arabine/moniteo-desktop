@@ -6,7 +6,7 @@
 #include "Settings.h"
 #include "Log.h"
 #include "JsonWriter.h"
-#include "asio.hpp"
+#include <boost/asio.hpp>
 #include "Value.h"
 
 #ifdef USE_WINDOWS_OS
@@ -28,6 +28,7 @@ static const char gDefaultSendPath[] = "/api/v1/data/downlink";
 
 MainWindow::MainWindow()
     : taskList(mEngine)
+    , courseWindow(mEngine)
 {
     Log::EnableLog(false);
 
@@ -397,7 +398,7 @@ void MainWindow::Loop()
             taskList.Draw("Test list", nullptr);
         }
         tableWindow.Draw("Tableau des passages", nullptr, mEngine);
-        courseWindow.Draw("Infos Course", nullptr, mEngine);
+        courseWindow.Draw("Infos Course", nullptr);
         ShowOptionsWindow();
 
         if (aboutToClose)

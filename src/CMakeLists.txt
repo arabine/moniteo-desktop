@@ -58,6 +58,8 @@ set(SRCS
     ImageWindow.cpp
     ImageWindow.h
 
+    http-client.h
+
     MainWindow.cpp
     MainWindow.h
 
@@ -111,6 +113,7 @@ target_link_libraries(${MANOLAB_PROJECT}
     pthread
     udev
     OpenGL::GL
+    ssl crypto
 )
 elseif(WIN32)
 target_link_libraries(${MANOLAB_PROJECT}
@@ -129,7 +132,7 @@ endif()
 target_include_directories(
     ${MANOLAB_PROJECT}
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/asio
+#    ${CMAKE_CURRENT_SOURCE_DIR}/asio
     /usr/include/SDL2
     ${CMAKE_CURRENT_SOURCE_DIR}/gl3w
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui

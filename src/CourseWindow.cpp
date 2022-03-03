@@ -2,72 +2,123 @@
 #include "imgui.h"
 #include "JsonReader.h"
 #include "Util.h"
-#include "HttpProtocol.h"
-#include "TcpClient.h"
-#include "HttpClient.h"
+
 #include "Log.h"
 
-CourseWindow::CourseWindow()
+CourseWindow::CourseWindow(IProcessEngine &engine)
+    : mEngine(engine)
 {
+    mHttpThread = std::thread(&CourseWindow::RunHttp, this);
+}
 
+CourseWindow::~CourseWindow()
+{
+    HttpClient::Request req;
+    req.quit = true;
+    mHttpQueue.Push(req);
+
+    if (mHttpThread.joinable())
+    {
+        mHttpThread.join();
+    }
+}
+
+void CourseWindow::RunHttp()
+{
+    bool quit = false;
+    HttpClient::Request req;
+    while(!quit)
+    {
+        if (mHttpQueue.TryPop(req))
+        {
+            if (!req.quit)
+            {
+                std::string response = mHttpClient.ExecuteAsync(req);
+
+                std::cout << response << std::endl;
+                JsonReader reader;
+                JsonValue json;
+                if (reader.ParseString(json, response))
+                {
+                    if (json.IsArray())
+                    {
+                        mTable.clear();
+                        mCategories.clear();
+                        for (const auto &e : json.GetArray())
+                        {
+                            Entry entry;
+
+                            entry.dossard = Util::FromString<uint64_t>(e.FindValue("dossard").GetString());
+                            entry.dbId = Util::FromString<uint64_t>(e.FindValue("id").GetString());
+                            entry.tours = Util::FromString<uint64_t>(e.FindValue("tours").GetString());
+                            entry.category = e.FindValue("F5").GetString();
+                            entry.lastname = e.FindValue("F6").GetString();
+                            entry.firstname = e.FindValue("F7").GetString();
+                            entry.club = e.FindValue("F8").GetString();
+
+                            // Protection en cas de catégorie invalide ou non renseignée
+                            if (entry.category.size() > 0)
+                            {
+                                mTable[entry.dossard] = entry;
+                                mCategories.insert(entry.category);
+                            }
+                        }
+
+                        // Copie dans les tables internes de Manolab
+                        std::vector<Value> line;
+                        for (auto & c : mCategories)
+                        {
+                            line.push_back(c);
+                        }
+                        mEngine.SetTableEntry("categories", 0, line);
+
+                        uint32_t index = 0;
+                        for (const auto & e : mTable)
+                        {
+                            line.clear();
+
+                            line.push_back(Value(e.second.dossard));
+                            line.push_back(Value(e.second.category));
+                            line.push_back(Value(e.second.tours));
+                            mEngine.SetTableEntry("dossards", index, line);
+                            index++;
+                        }
+
+                    }
+                    else
+                    {
+                        TLogError("[HTTP] JSON format: not an array!");
+                    }
+                }
+                else
+                {
+                    TLogError("[HTTP] Parse JSON reply error");
+                }
+            }
+            quit = req.quit;
+        }
+    }
 }
 
 bool CourseWindow::GetCourse(const std::string &host, const std::string &path, uint16_t port)
 {
     bool success = false;
-    HttpClient client;
+
     std::string response;
-    if (client.Get(host, path, port, response))
-    {
-        std::cout << response << std::endl;
-        JsonReader reader;
-        JsonValue json;
-        if (reader.ParseString(json, response))
-        {
-            if (json.IsArray())
-            {
-                mTable.clear();
-                mCategories.clear();
-                for (const auto &e : json.GetArray())
-                {
-                    Entry entry;
+    HttpClient::Request req;
 
-                    entry.dossard = Util::FromString<uint64_t>(e.FindValue("dossard").GetString());
-                    entry.dbId = Util::FromString<uint64_t>(e.FindValue("id").GetString());
-                    entry.tours = Util::FromString<uint64_t>(e.FindValue("tours").GetString());
-                    entry.category = e.FindValue("F5").GetString();
-                    entry.lastname = e.FindValue("F6").GetString();
-                    entry.firstname = e.FindValue("F7").GetString();
-                    entry.club = e.FindValue("F8").GetString();
+    req.action = HttpClient::Action::HTTP_GET;
+    req.host = mServer;
+    req.port = std::to_string(mPort);
+    req.target = mPath;
+    req.secured = false;
 
-                    // Protection en cas de catégorie invalide ou non renseignée
-                    if (entry.category.size() > 0)
-                    {
-                        mTable[entry.dossard] = entry;
-                        mCategories.insert(entry.category);
-                    }
-                }
+    mHttpQueue.Push(req);
 
-                success = true;
-            }
-            else
-            {
-                TLogError("[HTTP] JSON format: not an array!");
-            }
-        }
-        else
-        {
-            TLogError("[HTTP] Parse JSON reply error");
-        }
-    }
-    else
-    {
-        TLogError("[HTTP] Receive timeout !!");
-    }
     return success;
 }
 
-void CourseWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
+void CourseWindow::Draw(const char *title, bool *p_open)
 {
     ImGui::Begin(title, p_open);
 
@@ -75,27 +126,7 @@ void CourseWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
 
     if (ImGui::Button( "Récupérer", ImVec2(100, 40)))
     {
-        if (GetCourse(mServer, mPath, mPort))
-        {
-            std::vector<Value> line;
-            for (auto & c : mCategories)
-            {
-                line.push_back(c);
-            }
-            engine.SetTableEntry("categories", 0, line);
-
-            uint32_t index = 0;
-            for (const auto & e : mTable)
-            {
-                line.clear();
-
-                line.push_back(Value(e.second.dossard));
-                line.push_back(Value(e.second.category));
-                line.push_back(Value(e.second.tours));
-                engine.SetTableEntry("dossards", index, line);
-                index++;
-            }
-        }
+        GetCourse(mServer, mPath, mPort);
     }
 
     ImGui::Text("Participants : %d, Catégories : %d", static_cast<int>(mTable.size()), static_cast<int>(mCategories.size()));

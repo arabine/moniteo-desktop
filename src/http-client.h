@@ -35,6 +35,7 @@ public:
         std::string body;
         Action action;
 
+        bool secured = true;
         bool quit;
 
         Request (bool q = false)
@@ -84,11 +85,14 @@ private:
     // Performs an HTTP GET and prints the response
     class session : public std::enable_shared_from_this<session>
     {
+    private:
         boost::asio::ip::tcp::resolver resolver_;
-        boost::beast::ssl_stream<boost::beast::tcp_stream> stream_;
+        boost::beast::ssl_stream<boost::beast::tcp_stream> stream_s;
+        boost::beast::tcp_stream stream_;
         boost::beast::flat_buffer buffer_; // (Must persist between reads)
         boost::beast::http::request<boost::beast::http::string_body> req_;
         boost::beast::http::response<boost::beast::http::string_body> res_;
+        bool m_secured = true;
 
     public:
 
@@ -100,20 +104,25 @@ private:
         session(
             boost::asio::any_io_executor ex,
             boost::asio::ssl::context& ctx)
-        : resolver_(ex)
-        , stream_(ex, ctx)
+            : resolver_(ex)
+            , stream_s(ex, ctx)
+            , stream_(ex)
         {
         }
 
         // Start the asynchronous operation
         void run(const Request &request)
         {
-            // Set SNI Hostname (many hosts need this to handshake successfully)
-            if(! SSL_set_tlsext_host_name(stream_.native_handle(), request.host.c_str()))
+            m_secured = request.secured;
+            if (m_secured)
             {
-                boost::beast::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
-                std::cerr << ec.message() << "\n";
-                return;
+                // Set SNI Hostname (many hosts need this to handshake successfully)
+                if(! SSL_set_tlsext_host_name(stream_s.native_handle(), request.host.c_str()))
+                {
+                    boost::beast::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
+                    std::cerr << ec.message() << "\n";
+                    return;
+                }
             }
 
             boost::beast::http::verb verb = request.action == HTTP_POST ? boost::beast::http::verb::post : boost::beast::http::verb::get;
@@ -149,15 +158,25 @@ private:
             if(ec)
                 return fail(ec, "resolve");
 
-            // Set a timeout on the operation
-            boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(5));
+            if (m_secured)
+            {
+                // Set a timeout on the operation
+                boost::beast::get_lowest_layer(stream_s).expires_after(std::chrono::seconds(5));
 
-            // Make the connection on the IP address we get from a lookup
-            boost::beast::get_lowest_layer(stream_).async_connect(
-                results,
-                boost::beast::bind_front_handler(
-                    &session::on_connect,
-                    shared_from_this()));
+                // Make the connection on the IP address we get from a lookup
+                boost::beast::get_lowest_layer(stream_s).async_connect(
+                    results,
+                    boost::beast::bind_front_handler(&session::on_connect, shared_from_this()));
+            }
+            else
+            {
+                // Set a timeout on the operation
+                boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(5));
+                // Make the connection on the IP address we get from a lookup
+                boost::beast::get_lowest_layer(stream_).async_connect(
+                    results,
+                    boost::beast::bind_front_handler(&session::on_connect, shared_from_this()));
+            }
         }
 
         void
@@ -166,12 +185,20 @@ private:
             if(ec)
                 return fail(ec, "connect");
 
-            // Perform the SSL handshake
-            stream_.async_handshake(
-                boost::asio::ssl::stream_base::client,
-                boost::beast::bind_front_handler(
-                    &session::on_handshake,
-                    shared_from_this()));
+            if (m_secured)
+            {
+                // Perform the SSL handshake
+                stream_s.async_handshake(
+                    boost::asio::ssl::stream_base::client,
+                    boost::beast::bind_front_handler(
+                        &session::on_handshake,
+                        shared_from_this()));
+            }
+            else
+            {
+                // Send the HTTP request to the remote host
+                boost::beast::http::async_write(stream_, req_, boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
+            }
         }
 
         void
@@ -181,13 +208,10 @@ private:
                 return fail(ec, "handshake");
 
             // Set a timeout on the operation
-           boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(5));
+            boost::beast::get_lowest_layer(stream_s).expires_after(std::chrono::seconds(5));
 
             // Send the HTTP request to the remote host
-            boost::beast::http::async_write(stream_, req_,
-                boost::beast::bind_front_handler(
-                    &session::on_write,
-                    shared_from_this()));
+            boost::beast::http::async_write(stream_s, req_, boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
         }
 
         void
@@ -200,11 +224,15 @@ private:
             if(ec)
                 return fail(ec, "write");
 
-            // Receive the HTTP response
-            boost::beast::http::async_read(stream_, buffer_, res_,
-                boost::beast::bind_front_handler(
-                    &session::on_read,
-                    shared_from_this()));
+            if (m_secured)
+            {
+                // Receive the HTTP response
+                boost::beast::http::async_read(stream_s, buffer_, res_, boost::beast::bind_front_handler(&session::on_read, shared_from_this()));
+            }
+            else
+            {
+                boost::beast::http::async_read(stream_, buffer_, res_, boost::beast::bind_front_handler(&session::on_read, shared_from_this()));
+            }
         }
 
         void
@@ -220,14 +248,25 @@ private:
             // Write the message to standard out
             std::cout << res_ << std::endl;
 
-            // Set a timeout on the operation
-            boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(5));
+            if (m_secured)
+            {
+                // Set a timeout on the operation
+                boost::beast::get_lowest_layer(stream_s).expires_after(std::chrono::seconds(5));
 
-            // Gracefully close the stream
-            stream_.async_shutdown(
-                boost::beast::bind_front_handler(
-                    &session::on_shutdown,
-                    shared_from_this()));
+                // Gracefully close the stream
+                stream_s.async_shutdown(
+                    boost::beast::bind_front_handler(
+                        &session::on_shutdown,
+                        shared_from_this()));
+            }
+            else
+            {
+                // Set a timeout on the operation
+                boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(5));
+
+                // Gracefully close the stream
+                stream_.close();
+            }
         }
 
         void

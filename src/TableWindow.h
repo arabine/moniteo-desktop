@@ -10,6 +10,8 @@
 #include "DurationTimer.h"
 //#include "Pool.h"
 
+#include "http-client.h"
+
 class TableWindow
 {
 public:

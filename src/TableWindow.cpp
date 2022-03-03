@@ -10,7 +10,7 @@
 
 #include "thread_pool.hpp"
 
-static thread_pool pool;
+//static thread_pool pool;
 
 TableWindow::TableWindow()
 {
@@ -66,7 +66,7 @@ TableWindow::TableWindow()
 
 TableWindow::~TableWindow()
 {
-    pool.reset();
+//    pool.reset();
 }
 
 void TableWindow::RefreshWindowParameter()
@@ -182,7 +182,7 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
         if (!sendInAction)
         {
             sendInAction = true;
-
+/*
             pool.push_task([&] () {
           //  mPool.enqueue_task([&] () {
                 mMutex.lock();
@@ -192,6 +192,7 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
                SendToServer(ToJson(tableCopy, startTime), mServer, mPath, mPort);
                sendInAction = false;
             });
+            */
         }
     }
 
