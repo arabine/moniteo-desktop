@@ -42,7 +42,7 @@ TableWindow::TableWindow()
     }
 
     RefreshWindowParameter();
-    /*
+/*
     // FAKE DATA FOR TESTS
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -60,8 +60,8 @@ TableWindow::TableWindow()
         }
         mTable[e.tag] = e;
     }
+*/
 
-    */
 }
 
 TableWindow::~TableWindow()
@@ -242,11 +242,21 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
         uint32_t index = 0;
         for (auto & c : mCategories)
         {
-            ImGui::Checkbox(c.first.c_str(), &c.second);
+            //ImGui::Checkbox(c.first.c_str(), &c.second);
+
+            if (ImGui::Button( c.first.c_str(), ImVec2(80, 30)))
+            {
+                c.second = true;
+            }
+
             index++;
-            if (index < mCategories.size())
+            if (index < 8)
             {
                 ImGui::SameLine();
+            }
+            else
+            {
+                index = 0;
             }
         }
     }

@@ -132,11 +132,6 @@ void MainWindow::SetupMainMenuBar()
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Choisir le répertoire de travail"))
-            {
-                fileDialog.OpenDialog("ChooseDirDlgKey", "Choisir un dossier", nullptr, ".");
-            }
-
             if (ImGui::MenuItem("Paramètres"))
             {
                 showParameters = true;
@@ -191,37 +186,19 @@ void MainWindow::SetupMainMenuBar()
         }
        ImGui::EndPopup();
     }
-
-    // display
-    if (fileDialog.Display("ChooseDirDlgKey"))
-    {
-        // action if OK
-        if (fileDialog.IsOk())
-        {
-        //   std::string filePathName = fileDialog.GetFilePathName();
-            std::string ws = fileDialog.GetCurrentPath();
-            mEngine.SetWorkspace(ws);
-            mSettings.WriteSettings(mEngine);
-            console.AddMessage("[INFO] Workspace changed to: " + ws);
-            taskList.ScanWorkspace();
-
-          // action
-        }
-
-        // close
-        fileDialog.Close();
-    }
 }
 
 void MainWindow::Initialize()
 {
     // GUI Init
     gui.Initialize();
-    gui.ApplyTheme();
+  //  gui.ApplyTheme();
 
     editor.Initialize();
     imgWindow.Initialize();
     taskList.Initialize();
+
+    mEngine.SetWorkspace(Util::ExecutablePath());
 
     std::function< void(int, const std::vector<Value>&) > cb = std::bind( &MainWindow::EngineEvents, this, std::placeholders::_1 , std::placeholders::_2 );
     mEngine.RegisterEventEmitter(cb);
@@ -488,7 +465,7 @@ void MainWindow::EngineEvents(int signal, const std::vector<Value> &args)
     case ProcessEngine::SIG_DELAY_1S:
         if (args.size() > 0)
         {
-            console.AddMessage("[TEST] Delay: " + std::to_string(args[0].GetInteger()));
+//            console.AddMessage("[TEST] Delay: " + std::to_string(args[0].GetInteger()));
             //            QMetaObject::invokeMethod(this, "sigDelay", Qt::QueuedConnection,
             //                                      Q_ARG(int, args[0].GetInteger()));
 
@@ -497,8 +474,8 @@ void MainWindow::EngineEvents(int signal, const std::vector<Value> &args)
     case ProcessEngine::SIG_TEST_NUMBER:
         if (args.size() > 1)
         {
-            console.AddMessage("[TEST] Test number: " + std::to_string(args[0].GetInteger())
-                               + " / " + std::to_string(args[1].GetInteger()));
+//            console.AddMessage("[TEST] Test number: " + std::to_string(args[0].GetInteger())
+//                               + " / " + std::to_string(args[1].GetInteger()));
             //            QMetaObject::invokeMethod(this, "sigTest", Qt::QueuedConnection,
             //                                      Q_ARG(int, args[0].GetInteger()),
             //                                      Q_ARG(int, args[1].GetInteger())
@@ -509,14 +486,14 @@ void MainWindow::EngineEvents(int signal, const std::vector<Value> &args)
         if (args.size() >= 2)
         {
             std::string enabled = args[1].GetBool() ? "true" : "false";
-            console.AddMessage("[TEST] Test step: " + args[0].GetString() + " " + enabled);
+//            console.AddMessage("[TEST] Test step: " + args[0].GetString() + " " + enabled);
             //            QMetaObject::invokeMethod(this, "sigStep", Qt::QueuedConnection,
             //                                      Q_ARG(QString, .c_str()),
             //                                      Q_ARG(bool, args[1].GetBool()));
         }
         break;
     case ProcessEngine::SIG_TEST_FINISHED:
-        console.AddMessage("[TEST] Finished");
+//        console.AddMessage("[TEST] Finished");
         //        QMetaObject::invokeMethod(this, "sigFinished", Qt::QueuedConnection);
 
         break;
@@ -578,12 +555,12 @@ void MainWindow::EngineEvents(int signal, const std::vector<Value> &args)
         break;
 
     case ProcessEngine::SIG_TEST_ENDED:
-        console.AddMessage("Test ended");
+//        console.AddMessage("Test ended");
         //        QMetaObject::invokeMethod(this, "sigTestEnded", Qt::QueuedConnection);
         break;
 
     case ProcessEngine::SIG_TEST_ERROR:
-        console.AddMessage("[TEST] Error");
+//        console.AddMessage("[TEST] Error");
         //        QMetaObject::invokeMethod(this, "sigTestError", Qt::QueuedConnection);
         break;
     case ProcessEngine::SIG_TABLE_ACTION:

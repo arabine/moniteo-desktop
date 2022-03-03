@@ -30,7 +30,7 @@ private:
     TaskListWindow taskList;
     Settings mSettings;
     TableWindow tableWindow;
-    ImGuiFileDialog fileDialog;
+
     CourseWindow courseWindow;
 
     char mBufAddress[200];
