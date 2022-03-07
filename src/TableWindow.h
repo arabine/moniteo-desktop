@@ -11,6 +11,7 @@
 //#include "Pool.h"
 
 #include "http-client.h"
+#include "ThreadQueue.h"
 
 class TableWindow
 {
@@ -70,8 +71,12 @@ private:
     std::string mPath;
     uint16_t mPort;
 
+
+    HttpClient mHttpClient;
+    ThreadQueue<HttpClient::Request> mHttpQueue;
+    std::thread mHttpThread;
+
     DurationTimer timer;
-//    thread_pool mPool;
 
     std::vector<Value> mCatLabels;
     // clé: nom catégorie
@@ -83,15 +88,18 @@ private:
     std::map<uint32_t, std::string> mDossards;
 
     bool mSendToCloud = false;
+    bool mSending = false;
 
     // clé: numéro de dossard
     // Valeur: nombre de tours max
     std::map<uint32_t, uint32_t> mToursMax;
 
     void RefreshWindowParameter();
-    void SendToServer(const std::string &body, const std::string &host, const std::string &path, uint16_t port);
+    void SendToServer(const std::string &body);
     std::string ToJson(const std::map<int64_t, Entry> &table, int64_t startTime);
     void Autosave(const std::map<int64_t, Entry>& table, int64_t startTime);
+    bool ShowEraseConfirm();
+    void RunHttp();
 };
 
 #endif // TABLEWINDOW_H

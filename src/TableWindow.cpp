@@ -42,31 +42,20 @@ TableWindow::TableWindow()
     }
 
     RefreshWindowParameter();
-/*
-    // FAKE DATA FOR TESTS
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dis(1, 5000);
-    mTable.clear();
-    // 10 coureurs
-    for (int i = 0; i < 10; i++)
-    {
-        Entry e;
-        e.tag = i + 1;
-        for (int tours = 0; tours < 4; tours++)
-        {
-            uint64_t time = tours * 120000 + dis(gen);
-            e.laps.push_back(time);
-        }
-        mTable[e.tag] = e;
-    }
-*/
 
+    mHttpThread = std::thread(&TableWindow::RunHttp, this);
 }
 
 TableWindow::~TableWindow()
 {
-//    pool.reset();
+    HttpClient::Request req;
+    req.quit = true;
+    mHttpQueue.Push(req);
+
+    if (mHttpThread.joinable())
+    {
+        mHttpThread.join();
+    }
 }
 
 void TableWindow::RefreshWindowParameter()
@@ -75,37 +64,70 @@ void TableWindow::RefreshWindowParameter()
     sprintf(buf2, "%.10s", tempWindow.c_str());
 }
 
-void TableWindow::SendToServer(const std::string &body, const std::string &host, const std::string &path, uint16_t port)
+void TableWindow::RunHttp()
 {
-    HttpRequest request;
-
-    request.method = "POST";
-    request.protocol = "HTTP/1.1";
-    request.query = path;
-    request.body = body;
-    request.headers["Host"] = "www." + host;
-    request.headers["Content-type"] = "application/json";
-    request.headers["Content-length"] = std::to_string(body.size());
-
-    tcp::TcpClient client;
-    HttpProtocol http;
-
-    client.Initialize();
-    if (client.Connect(host, port))
+    bool quit = false;
+    HttpClient::Request req;
+    while(!quit)
     {
-        if (client.Send(http.GenerateRequest(request)))
+        if (mHttpQueue.TryPop(req))
         {
-            TLogInfo("[HTTP] Send request success!");
-        }
-        else
-        {
-            TLogError("[HTTP] Send request failed");
+            if (!req.quit)
+            {
+                std::string response = mHttpClient.ExecuteAsync(req);
+
+                std::cout << response << std::endl;
+                mSending = false;
+            }
+            quit = req.quit;
         }
     }
-    else
-    {
-        TLogError("[HTTP] Connect to server failed");
-    }
+}
+
+void TableWindow::SendToServer(const std::string &body)
+{
+    HttpClient::Request req;
+
+    req.action = HttpClient::Action::HTTP_POST;
+    req.host = mServer;
+    req.port = std::to_string(mPort);
+    req.body = body;
+    req.target = mPath;
+    req.secured = false;
+
+    mHttpQueue.Push(req);
+
+
+
+//    HttpRequest request;
+
+//    request.method = "POST";
+//    request.protocol = "HTTP/1.1";
+//    request.query = path;
+//    request.body = body;
+//    request.headers["Host"] = "www." + host;
+//    request.headers["Content-type"] = "application/json";
+//    request.headers["Content-length"] = std::to_string(body.size());
+
+//    tcp::TcpClient client;
+//    HttpProtocol http;
+
+//    client.Initialize();
+//    if (client.Connect(host, port))
+//    {
+//        if (client.Send(http.GenerateRequest(request)))
+//        {
+//            TLogInfo("[HTTP] Send request success!");
+//        }
+//        else
+//        {
+//            TLogError("[HTTP] Send request failed");
+//        }
+//    }
+//    else
+//    {
+//        TLogError("[HTTP] Connect to server failed");
+//    }
 }
 
 std::string TableWindow::ToJson(const std::map<int64_t, Entry> &table, int64_t startTime)
@@ -146,6 +168,34 @@ void TableWindow::Autosave(const std::map<int64_t, Entry>& table, int64_t startT
     Util::StringToFile("export.json", json.ToString(), false);
 }
 
+bool TableWindow::ShowEraseConfirm()
+{
+    bool quitRequest = false;
+    // Always center this window when appearing
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+   // ImGui::SetNextWindowSize(ImVec2(200, 150));
+    if (ImGui::BeginPopupModal("EraseConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Voulez-vous vraiment effacer les résultats ?");
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0)))
+        {
+            quitRequest = true;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    return quitRequest;
+}
 
 void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
 {
@@ -172,16 +222,17 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
         mSendToCloud = true;
     }
 
-    static bool sendInAction = false;
-
     /* ======================  Envoi dans le Cloud ====================== */
     if (ImGui::Button( "Envoyer", ImVec2(100, 40)) || mSendToCloud)
     {
-
         mSendToCloud = false;
-        if (!sendInAction)
+        if (!mSending)
         {
-            sendInAction = true;
+            mSending = true;
+            mMutex.lock();
+            std::map<int64_t, Entry> tableCopy = mTable;
+            mMutex.unlock();
+            SendToServer(ToJson(tableCopy, startTime));
 /*
             pool.push_task([&] () {
           //  mPool.enqueue_task([&] () {
@@ -195,6 +246,22 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
             */
         }
     }
+
+    ImGui::SameLine(400.0);
+
+
+    if (ImGui::Button( "EFFACER", ImVec2(100, 40)))
+    {
+        ImGui::OpenPopup("EraseConfirm");
+    }
+
+    if (ShowEraseConfirm())
+    {
+        std::scoped_lock<std::mutex> lock(mMutex);
+        mTable.clear();
+        Autosave(table, startTime);
+    }
+
 
     ImGui::Text("Tags : %d", static_cast<int>(table.size()));
 
@@ -243,12 +310,12 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
         uint32_t index = 0;
         for (auto & c : mCategories)
         {
-            //ImGui::Checkbox(c.first.c_str(), &c.second);
+            ImGui::Checkbox(c.first.c_str(), &c.second);
 
-            if (ImGui::Button( c.first.c_str(), ImVec2(80, 30)))
-            {
-                c.second = true;
-            }
+//            if (ImGui::Button( "TOP", ImVec2(80, 30)))
+//            {
+//                // Top départ manuel
+//            }
 
             index++;
             if (index < 8)
@@ -258,9 +325,12 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
             else
             {
                 index = 0;
+                ImGui::NewLine();
             }
         }
     }
+
+    ImGui::NewLine();
 
     ImGuiTableFlags tableFlags = ImGuiTableFlags_Borders | 
                 ImGuiTableFlags_RowBg |

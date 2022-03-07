@@ -376,10 +376,23 @@ bool MainWindow::ShowQuitConfirm()
 }
 
 
+auto start = std::chrono::system_clock::now();
+std::default_random_engine rng(std::random_device{}());
+std::uniform_real_distribution<double> dist_players(810, 900);  //(min, max)
+
+std::uniform_real_distribution<double> dist_delay(1000, 10000);  //(min, max)
+
+typedef std::chrono::duration<double, std::milli> duration;
+
 void MainWindow::Loop()
 {
     // Main loop
     bool done = false;
+
+    // do some work
+    // record end time
+
+    double next = dist_delay(rng);
 
     while (!done)
     {
@@ -411,7 +424,31 @@ void MainWindow::Loop()
         }
 
         gui.EndFrame();
+
+
+        // -------------------- Simulation
+        auto end = std::chrono::system_clock::now();
+        duration diff = end - start;
+
+        if (diff.count() >= next)
+        {
+            next = dist_delay(rng);
+
+            // Joueur au hasard
+            int p = dist_players(rng);
+            std::vector<Value> args;
+            args.push_back(std::string("{\"tag\": " + std::to_string(p) + ", \"time\": " + std::to_string(Util::CurrentTimeStamp64()) + "}"));
+            tableWindow.ParseAction(args);
+        }
+
+        // -------------------- Simulation END
     }
+
+
+
+
+
+
 
     gui.Destroy();
     mEngine.Stop();
@@ -447,6 +484,10 @@ void MainWindow::LoadParams()
 
         std::string portStr = Util::ToString<int>(mServerPort);
         std::strncpy(mBufPort, portStr.c_str(), sizeof (mBufPort));
+
+        // On applique la configuration
+        courseWindow.SetServer(mServerAddr, mServerRecUrl, mServerPort);
+        tableWindow.SetServer(mServerAddr, mServerSndUrl, mServerPort);
     }
 }
 
