@@ -116,17 +116,24 @@ target_link_libraries(${MANOLAB_PROJECT}
     ssl crypto
 )
 elseif(WIN32)
+
+SET(BOOST_DIR d:/boost_1_78_0)
+SET(OPENSSL_DIR D:/OpenSSL/1.1.1m)
+
 target_link_libraries(${MANOLAB_PROJECT}
     manolab
     icl
     SDL2
     SDL2main.lib
     OpenGL::GL
-    ws2_32.lib psapi.lib setupapi.lib cfgmgr32.lib advapi32.lib Dbghelp.lib
+    ws2_32.lib psapi.lib setupapi.lib cfgmgr32.lib advapi32.lib Dbghelp.lib  libssl_static libcrypto_static
 )
 set_target_properties(${MANOLAB_PROJECT} PROPERTIES
-LINK_FLAGS /SUBSYSTEM:CONSOLE
-)   
+LINK_FLAGS /SUBSYSTEM:WINDOWS
+)
+
+target_link_directories(${MANOLAB_PROJECT} PUBLIC ${OPENSSL_DIR}/lib)
+
 endif()
 
 target_include_directories(
@@ -145,4 +152,6 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/modbuslib
     ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/serial
     ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/libhid
+    ${BOOST_DIR}
+    ${OPENSSL_DIR}/include
 )

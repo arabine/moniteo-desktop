@@ -375,7 +375,7 @@ bool MainWindow::ShowQuitConfirm()
     return quitRequest;
 }
 
-
+/*
 auto start = std::chrono::system_clock::now();
 std::default_random_engine rng(std::random_device{}());
 std::uniform_real_distribution<double> dist_players(810, 900);  //(min, max)
@@ -383,7 +383,7 @@ std::uniform_real_distribution<double> dist_players(810, 900);  //(min, max)
 std::uniform_real_distribution<double> dist_delay(1000, 10000);  //(min, max)
 
 typedef std::chrono::duration<double, std::milli> duration;
-
+*/
 void MainWindow::Loop()
 {
     // Main loop
@@ -392,7 +392,7 @@ void MainWindow::Loop()
     // do some work
     // record end time
 
-    double next = dist_delay(rng);
+   // double next = dist_delay(rng);
 
     while (!done)
     {
@@ -425,7 +425,7 @@ void MainWindow::Loop()
 
         gui.EndFrame();
 
-
+        /*
         // -------------------- Simulation
         auto end = std::chrono::system_clock::now();
         duration diff = end - start;
@@ -440,6 +440,8 @@ void MainWindow::Loop()
             args.push_back(std::string("{\"tag\": " + std::to_string(p) + ", \"time\": " + std::to_string(Util::CurrentTimeStamp64()) + "}"));
             tableWindow.ParseAction(args);
         }
+
+        */
 
         // -------------------- Simulation END
     }
