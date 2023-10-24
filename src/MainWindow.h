@@ -3,11 +3,6 @@
 
 #include "Gui.h"
 #include "ConsoleWindow.h"
-#include "CodeEditor.h"
-#include "ProcessEngine.h"
-#include "ImageWindow.h"
-#include "TaskListWindow.h"
-#include "Settings.h"
 #include "TableWindow.h"
 #include "CourseWindow.h"
 #include "Pool.h"
@@ -22,13 +17,10 @@ public:
     void Loop();
 
 private:
-    ProcessEngine mEngine;
+
     Gui gui;
-    ImageWindow imgWindow;
+
     ConsoleWindow console;
-    CodeEditor editor;
-    TaskListWindow taskList;
-    Settings mSettings;
     TableWindow tableWindow;
 
     CourseWindow courseWindow;
@@ -52,7 +44,7 @@ private:
     void LoadParams();
 
     void SetupMainMenuBar();
-    void EngineEvents(int signal, const std::vector<Value> &args);
+   
     void ShowOptionsWindow();
     bool ShowQuitConfirm();
     bool ExecutePing(const std::string &host);

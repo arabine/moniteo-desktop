@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(MANOLAB_PROJECT moniteo)
+set(MONITEO_PROJECT moniteo)
 
-project(${MANOLAB_PROJECT} LANGUAGES C CXX)
+project(${MONITEO_PROJECT} LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set (CMAKE_C_STANDARD 11)
@@ -11,23 +11,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # set(CMAKE_VERBOSE_MAKEFILE on)
 
-if (WIN32)
-    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/windows/SDL2/lib/x64)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/windows/SDL2/include)
-
-endif (WIN32)
-
-set(ICL_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/icl)
-include(${CMAKE_CURRENT_SOURCE_DIR}/icl/icl.cmake)
-
-
-if (MSVC)
-     add_compile_options("/FS")
-endif (MSVC)
-
-# The second parameter is output directory for the results of the targets from that subdirectory.
-add_subdirectory(manolab)
-add_subdirectory(icl)
 
 if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW)
@@ -37,28 +20,26 @@ find_package(OpenGL REQUIRED)
 
 if (UNIX AND NOT APPLE)
     add_definitions(-DUSE_UNIX_OS -DUSE_LINUX_OS)
+    add_link_options(-static-libgcc -static-libstdc++)
 endif()
 
 if(WIN32)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_options(/FS /bigobj)
+    endif()
     add_definitions(-DUSE_WINDOWS_OS)
 endif()
 
 add_definitions(-DUNICODE)
 
 set(SRCS
-    gl3w/GL/gl3w.c
     main.cpp
     WindowBase.h
     ConsoleWindow.cpp
     ConsoleWindow.h
 
-    TaskListWindow.cpp
-    TaskListWindow.h
-
-    ImageWindow.cpp
-    ImageWindow.h
-
-    http-client.h
+    Util.cpp
+    Log.cpp
 
     MainWindow.cpp
     MainWindow.h
@@ -72,40 +53,38 @@ set(SRCS
     Gui.h
     Gui.cpp
 
-    CodeEditor.cpp
-    CodeEditor.h
-
     imgui/imgui.cpp
     imgui/imgui_draw.cpp
     imgui/imgui_tables.cpp
     imgui/imgui_widgets.cpp
-    imgui/backends/imgui_impl_sdl.cpp
-    imgui/backends/imgui_impl_opengl3.cpp
+    imgui/backends/imgui_impl_glfw.cpp
+    imgui/backends/imgui_impl_opengl2.cpp
     ImGuiColorTextEdit/TextEditor.cpp
     ImGuiColorTextEdit/TextEditor.h
     ImGuiFileDialog/ImGuiFileDialog.cpp
+
+    zebrafx7500/Zebra7500.cpp
+  #  zebrafx7500/Zebra7500Util.cpp
     
 )
 
 if(WIN32)
     list(APPEND
         SRCS
-        manolab/icon.rc
+        icon.rc
     )
 endif()
 
-add_executable(${MANOLAB_PROJECT}
+add_executable(${MONITEO_PROJECT}
     ${SRCS}
 )
-
-# add_definitions(-DUSE_UNIX_OS)
-add_link_options(-static-libgcc -static-libstdc++)
 
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GL3W)
 add_definitions(-Dcimg_display=0)
 
+
 if (UNIX)
-target_link_libraries(${MANOLAB_PROJECT}
+target_link_libraries(${MONITEO_PROJECT}
     manolab
     icl
     dl
@@ -117,41 +96,34 @@ target_link_libraries(${MANOLAB_PROJECT}
 )
 elseif(WIN32)
 
-SET(BOOST_DIR d:/boost_1_78_0)
-SET(OPENSSL_DIR D:/OpenSSL/1.1.1m)
 
-target_link_libraries(${MANOLAB_PROJECT}
-    manolab
-    icl
-    SDL2
-    SDL2main.lib
+target_link_libraries(${MONITEO_PROJECT}
     OpenGL::GL
-    ws2_32.lib psapi.lib setupapi.lib cfgmgr32.lib advapi32.lib Dbghelp.lib  libssl_static libcrypto_static
-)
-set_target_properties(${MANOLAB_PROJECT} PROPERTIES
-LINK_FLAGS /SUBSYSTEM:WINDOWS
+    glfw3
+    rfidapi32pc comctl32
+    ws2_32.lib psapi.lib setupapi.lib cfgmgr32.lib advapi32.lib Dbghelp.lib 
 )
 
-target_link_directories(${MANOLAB_PROJECT} PUBLIC ${OPENSSL_DIR}/lib)
+target_compile_definitions(${MONITEO_PROJECT} PUBLIC _CRT_SECURE_NO_WARNINGS _CRT_NON_CONFORMING_SWPRINTFS _WINSOCK_DEPRECATED_NO_WARNINGS)
+
+
+if( MSVC )
+    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:mainCRTStartup /SUBSYSTEM:windows /NODEFAULTLIB:library" )
+endif()
+
+target_link_directories(${MONITEO_PROJECT} PUBLIC ${OPENSSL_DIR}/lib glfw/lib-vc2019 zebrafx7500/libs/win64)
 
 endif()
 
 target_include_directories(
-    ${MANOLAB_PROJECT}
+    ${MONITEO_PROJECT}
     PUBLIC
-#    ${CMAKE_CURRENT_SOURCE_DIR}/asio
-    /usr/include/SDL2
     ${CMAKE_CURRENT_SOURCE_DIR}/gl3w
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
     ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiColorTextEdit
     ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiFileDialog
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab/devices
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab/jsext
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/modbuslib
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/serial
-    ${CMAKE_CURRENT_SOURCE_DIR}/manolab/lib/libhid
-    ${BOOST_DIR}
     ${OPENSSL_DIR}/include
+    glfw/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/zebrafx7500
 )

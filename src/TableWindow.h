@@ -1,8 +1,6 @@
 #ifndef TABLE_WINDOW_H
 #define TABLE_WINDOW_H
 
-#include "Value.h"
-#include "IProcessEngine.h"
 #include <vector>
 #include <map>
 #include <mutex>
@@ -10,17 +8,21 @@
 #include "DurationTimer.h"
 //#include "Pool.h"
 
-#include "http-client.h"
+#include "HttpOrder.h"
 #include "ThreadQueue.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <httplib.h>
 
 class TableWindow
 {
 public:
     TableWindow();
     ~TableWindow();
-    void Draw(const char *title, bool *p_open, IProcessEngine& engine);
+    void Draw(const char *title, bool *p_open);
 
-    void ParseAction(const std::vector<Value> &args);
+  //  void ParseAction(const std::vector<Value> &args);
 
     void SetServer(const std::string &server, const std::string &path, uint16_t port)
     {
@@ -71,14 +73,13 @@ private:
     std::string mPath;
     uint16_t mPort;
 
-
-    HttpClient mHttpClient;
-    ThreadQueue<HttpClient::Request> mHttpQueue;
+    
+    ThreadQueue<HttpOrder> mHttpQueue;
     std::thread mHttpThread;
 
     DurationTimer timer;
 
-    std::vector<Value> mCatLabels;
+    std::vector<std::string> mCatLabels;
     // clé: nom catégorie
     // valeur: si autorisée ou non
     std::map<std::string, bool> mCategories;

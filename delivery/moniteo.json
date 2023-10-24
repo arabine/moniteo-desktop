@@ -1,6 +1,0 @@
-{
-    "receive_url":"/api/v1/data/downlink",
-    "send_url":"/api/v1/data/uplink",
-    "server_address":"moniteo.io",
-    "server_port":80
-    }

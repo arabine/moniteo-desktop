@@ -7,14 +7,8 @@
 #include <cstdlib>        // std::abort
 #include <csignal>
 
-#include "TcpSocket.h"
-
-
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
 #include <iostream>
 
-using namespace boost::interprocess;
 
 #ifdef USE_LINUX_OS
 [[noreturn]] void signal_handler(int sig)
@@ -48,36 +42,10 @@ using namespace boost::interprocess;
 #endif
 
 
-class SingleProc
-{
-public:
-    SingleProc()
-    {
-        if (!named_mtx.try_lock())
-        {
-            std::cout << "Application already started" << std::endl;
-            exit(-1);
-        }
-    }
-
-    ~SingleProc()
-    {
-        std::cout << "DELETED" << std::endl;
-        named_mutex::remove("moniteo_mutex");
-    }
-
-private:
-    named_mutex named_mtx{open_or_create, "moniteo_mutex"};
-};
 
 // Main code
 int main(int, char**)
 {
-  //  named_mutex::remove("moniteo_mutex");
-  //  SingleProc proc;
-
-
-    tcp::TcpSocket::Initialize();
 
 #ifdef USE_LINUX_OS
     std::set_terminate(terminate_handler);
