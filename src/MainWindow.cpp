@@ -25,6 +25,7 @@ static const char gDefaultSendPath[] = "/api/v1/data/downlink";
 
 
 MainWindow::MainWindow()
+    : m_zebra(*this)
 {
     Log::EnableLog(false);
 
@@ -188,10 +189,29 @@ void MainWindow::Initialize()
     gui.Initialize();
   //  gui.ApplyTheme();
 
+    Zebra7500::Device d;
+    d.name = "nfc_reader";
+    d.type = "Zebra7500";
+    d.conn_channel = "192.168.1.1";
+    d.conn_settings = "";
+    d.id = "";
+    d.options = "";
+    m_zebra.SetConfiguration(d);
+    m_zebra.Initialize();
+    m_zebra.Start();
 
     LoadParams();
 }
 
+void MainWindow::TagEvent(int64_t id, uint64_t timestamp)
+{
+    // FIXME
+}
+
+void MainWindow::Message(const std::string &message) 
+{
+    console.AddMessage(message);
+}
 
 void MainWindow::ShowOptionsWindow()
 {
@@ -422,12 +442,6 @@ void MainWindow::Loop()
 
         // -------------------- Simulation END
     }
-
-
-
-
-
-
 
     gui.Destroy();
 }

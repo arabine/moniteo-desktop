@@ -8,6 +8,13 @@
 #include "EventLoop.h"
 #include "Util.h"
 
+class IDeviceEvent
+{
+public:
+    virtual void TagEvent(int64_t id, uint64_t timestamp) = 0;
+    virtual void Message(const std::string &message) = 0;
+};
+
 class Zebra7500
 {
 public:
@@ -18,26 +25,29 @@ public:
         std::string type;
         std::string conn_settings;
         std::string options;
+
+        Device() = default;
     };
-    Zebra7500();
+    Zebra7500(IDeviceEvent &ev);
     virtual ~Zebra7500();
 
-    void SetConfiguration();
+    void SetConfiguration(const Device &dev);
 
     bool Initialize();
     void Start();
      void Stop();
     void InventoryLoop();
-    void SendToManolab(int64_t id);
+
     void CheckCapabilities();
 
 private:
+    IDeviceEvent &m_ev;
     RFID_HANDLE32 readerHandle;
     READER_CAPS readerCaps;
     std::thread mThread;
     UINT16 frequencyIndex = 0;
 
-    Device dev;
+    Device m_dev;
 
     bool mInitialized = false;
 };

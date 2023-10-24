@@ -6,8 +6,8 @@
 #include "TableWindow.h"
 #include "CourseWindow.h"
 #include "Pool.h"
-
-class MainWindow
+#include "Zebra7500.h"
+class MainWindow : public IDeviceEvent
 {
 public:
     MainWindow();
@@ -16,14 +16,22 @@ public:
     void Initialize();
     void Loop();
 
+    // From IDeviceEvent
+    virtual void TagEvent(int64_t id, uint64_t timestamp) override;
+    virtual void Message(const std::string &message) override;
+
 private:
 
     Gui gui;
+
+    Zebra7500 m_zebra;
 
     ConsoleWindow console;
     TableWindow tableWindow;
 
     CourseWindow courseWindow;
+
+    
 
     char mBufAddress[200];
     char mBufReceivePath[200];

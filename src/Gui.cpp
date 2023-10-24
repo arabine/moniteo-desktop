@@ -46,7 +46,7 @@ bool Gui::Initialize()
         return 1;
 
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL2 example", nullptr, nullptr);
+    window = glfwCreateWindow(1280, 720, "Moniteo", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);

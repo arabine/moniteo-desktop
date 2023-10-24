@@ -18,7 +18,8 @@
 
 static ThreadQueue<int> mLoopQueue;
 
-Zebra7500::Zebra7500()
+Zebra7500::Zebra7500(IDeviceEvent &ev)
+    : m_ev(ev)
 {
 
 }
@@ -27,88 +28,12 @@ Zebra7500::~Zebra7500()
 {
     Stop();
 }
-/*
-std::string Zebra7500::Request(const std::string &req)
+
+
+void Zebra7500::SetConfiguration(const Device &dev)
 {
-    JsonReader reader;
-    JsonValue json;
-    bool success = false;
-    std::string cmd;
-    std::string returnValue;
-    std::string message;
-
-    if (reader.ParseString(json, req))
-    {
-        cmd = json.FindValue("cmd").GetString();
-        JsonValue data = json.FindValue("data");
-
-        if (cmd == "SetParameters")
-        {
-            if (data.IsObject())
-            {
-                dev.name = data.FindValue("name").GetString();
-                dev.type = data.FindValue("type").GetString();
-                dev.conn_channel = data.FindValue("conn_channel").GetString();
-                dev.conn_settings = data.FindValue("conn_settings").GetString();
-                dev.id = data.FindValue("id").GetString();
-                dev.options = data.FindValue("options").GetString();
-                success = Initialize();
-            }
-        }
-        else if (cmd == "Execute")
-        {
-            if (data.IsObject())
-            {
-                JsonArray array = data.FindValue("args").GetArray();
-                std::vector<Value> args;
-                for (const auto &a : array)
-                {
-                    args.push_back(PluginBase::JsonToValue(a));
-                }
-
-                Value ret;
-                success = Execute(args, ret);
-
-                if (success)
-                {
-                    JsonObject obj;
-                    obj.AddValue("cmd", "ReplyExecute");
-                    obj.AddValue("message", "");
-                    obj.AddValue("success", true);
-                    obj.AddValue("data", PluginBase::ValueToJson(ret));
-
-                    returnValue = obj.ToString();
-                }
-            }
-        }
-    }
-
-    if (!success)
-    {
-        returnValue = PluginBase::ErrorResponse(cmd, message);
-    }
-    else if (returnValue == "")
-    {
-        returnValue = PluginBase::GenericResponse(true, cmd);
-    }
-    return returnValue;
+    m_dev = dev;
 }
-
-*/
-
-void Zebra7500::SetConfiguration()
-{
-    /*
-    dev.name = data.FindValue("name").GetString();
-                dev.type = data.FindValue("type").GetString();
-                dev.conn_channel = data.FindValue("conn_channel").GetString();
-                dev.conn_settings = data.FindValue("conn_settings").GetString();
-                dev.id = data.FindValue("id").GetString();
-                dev.options = data.FindValue("options").GetString();
-                */
-}
-
-
 
 void Zebra7500::Start()
 {
@@ -183,7 +108,7 @@ void Zebra7500::CheckCapabilities()
 //    wprintf(L"\nEnter ReceiveSensitivityIndex  value range 0-%d   ", readerCaps.receiveSensitivtyTable.numValues-1);
 
     std::string log = "ReceiveSensitivityIndex  value range 0-" + std::to_string(readerCaps.receiveSensitivtyTable.numValues-1);
-  //  mCb->Callback(0, log.c_str()); FIXME ARE
+    m_ev.Message(log);
 
     rfidStatus = RFID_GetAntennaConfig(readerHandle, antennaID, &receiveSensitivityIndex,
         &transmitPowerIndex, &transmitFrequencyIndex);
@@ -192,7 +117,8 @@ void Zebra7500::CheckCapabilities()
         log = "Config: ReceiveSensitivityIndex=" + std::to_string(receiveSensitivityIndex) +
                 ", TransmitPowerIndex=" + std::to_string(transmitPowerIndex)+
                 ", TransmitFrequencyIndex=" + std::to_string(transmitFrequencyIndex);
-     //   mCb->Callback(0, log.c_str()); FIXME ARE
+
+        m_ev.Message(log);
 //        wprintf(L"\nReceiveSensitivityIndex = %d", receiveSensitivityIndex);
 //        wprintf(L"\nTransmitPowerIndex = %d", transmitPowerIndex);
 //        wprintf(L"\nTransmitFrequencyIndex = %d", transmitFrequencyIndex);
@@ -215,13 +141,15 @@ bool Zebra7500::Initialize()
 {
     if (!mInitialized)
     {
-        std::string channel = dev.conn_channel;
+        std::string channel = m_dev.conn_channel;
         wcscpy(hostName, Util::ToWString(channel).c_str());
 
         RFID_STATUS rfidStatus = ConnectReader(&readerHandle, hostName, 5084);
         if(RFID_API_SUCCESS == rfidStatus)
         {
             TAG_STORAGE_SETTINGS tagStorageSettings;
+
+             m_ev.Message("Connected to RFID reader success!");
 
             RFID_GetTagStorageSettings(readerHandle,&tagStorageSettings);
             tagStorageSettings.discardTagsOnInventoryStop = TRUE;
@@ -239,16 +167,6 @@ bool Zebra7500::Initialize()
     return mInitialized;
 }
 
-void Zebra7500::SendToManolab(int64_t id)
-{
-/*
-    JsonObject json;
-    json.AddValue("cmd", "SetTableEntry");
-    json.AddValue("tag", id);
-    json.AddValue("time", Util::CurrentTimeStamp64());
-*/
-   // mCb->Callback(1, json.ToString().c_str());
-}
 
 /*
 
@@ -393,7 +311,8 @@ void Zebra7500::InventoryLoop()
                 iss >> tid;
             }
 
-            SendToManolab(tid);
+           // SendToManolab(tid);
+            m_ev.TagEvent(tid, Util::CurrentTimeStamp64());
         }
     }
     while(loop);
