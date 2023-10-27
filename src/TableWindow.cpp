@@ -1,13 +1,11 @@
 #include "TableWindow.h"
 #include "imgui.h"
-#include "JsonReader.h"
 #include "Util.h"
-#include "HttpProtocol.h"
-#include "TcpClient.h"
 #include "Log.h"
-
 #include <random>
 
+#include "httplib.h"
+#include "json.hpp"
 #include "thread_pool.hpp"
 
 //static thread_pool pool;
@@ -21,6 +19,7 @@ TableWindow::TableWindow()
 
     if (fileData.size() > 0)
     {
+        /*
         JsonReader reader;
         JsonValue json;
         if (reader.ParseString(json, fileData))
@@ -39,6 +38,7 @@ TableWindow::TableWindow()
                 mTable[e.tag] = e;
             }
         }
+        */
     }
 
     RefreshWindowParameter();
@@ -48,8 +48,8 @@ TableWindow::TableWindow()
 
 TableWindow::~TableWindow()
 {
-    HttpClient::Request req;
-    req.quit = true;
+    HttpOrder req;
+    req.cmd = "quit";
     mHttpQueue.Push(req);
 
     if (mHttpThread.joinable())
@@ -67,25 +67,38 @@ void TableWindow::RefreshWindowParameter()
 void TableWindow::RunHttp()
 {
     bool quit = false;
-    HttpClient::Request req;
+    HttpOrder req;
+
+        // HTTP
+    httplib::Client cli("http://cpp-httplib-server.yhirose.repl.co");
+
     while(!quit)
     {
         if (mHttpQueue.TryPop(req))
         {
-            if (!req.quit)
+            if (req.cmd == "quit")
             {
-                std::string response = mHttpClient.ExecuteAsync(req);
-
-                std::cout << response << std::endl;
+                quit = true;
+            }
+            else
+            {
+                auto res = cli.Get("/hi");
+                res->status;
+                res->body;
+                std::cout << res->body << std::endl;
                 mSending = false;
             }
-            quit = req.quit;
+            
         }
     }
 }
 
 void TableWindow::SendToServer(const std::string &body)
 {
+        // HTTP
+    httplib::Client cli("http://cpp-httplib-server.yhirose.repl.co");
+
+    /*
     HttpClient::Request req;
 
     req.action = HttpClient::Action::HTTP_POST;
@@ -96,7 +109,7 @@ void TableWindow::SendToServer(const std::string &body)
     req.secured = false;
 
     mHttpQueue.Push(req);
-
+*/
 
 
 //    HttpRequest request;
@@ -132,23 +145,18 @@ void TableWindow::SendToServer(const std::string &body)
 
 std::string TableWindow::ToJson(const std::map<int64_t, Entry> &table, int64_t startTime)
 {
-    JsonArray arr;
-
+    nlohmann::json j;
     for (const auto &t : table)
     {
-        JsonObject obj;
-
-        obj.AddValue("id", t.first);
-        obj.AddValue("tours", static_cast<uint32_t>(t.second.laps.size()));
-        obj.AddValue("temps", t.second.ToString(startTime));
-        arr.AddValue(obj);
+        j.push_back(nlohmann::json{{"id", t.first}, {"tours", static_cast<uint32_t>(t.second.laps.size())}, {"temps", t.second.ToString(startTime)}});
     }
-    return arr.ToString();
+    return j.dump();
 }
 
 
 void TableWindow::Autosave(const std::map<int64_t, Entry>& table, int64_t startTime)
 {
+    /*
     JsonObject json;
     JsonArray arr;
 
@@ -166,6 +174,7 @@ void TableWindow::Autosave(const std::map<int64_t, Entry>& table, int64_t startT
     json.AddValue("table", arr);
 
     Util::StringToFile("export.json", json.ToString(), false);
+    */
 }
 
 bool TableWindow::ShowEraseConfirm()
@@ -197,7 +206,7 @@ bool TableWindow::ShowEraseConfirm()
     return quitRequest;
 }
 
-void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
+void TableWindow::Draw(const char *title, bool *p_open)
 {
     (void) p_open;
 
@@ -277,6 +286,8 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
     }
 
     /* ======================  CATEGORIES ====================== */
+
+    /*
     uint32_t nbLines = engine.GetTableSize("categories");
     if (nbLines == 1)
     {
@@ -329,6 +340,7 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
             }
         }
     }
+    */
 
     ImGui::NewLine();
 
@@ -367,7 +379,7 @@ void TableWindow::Draw(const char *title, bool *p_open, IProcessEngine &engine)
 
     ImGui::End();
 }
-
+/*
 void TableWindow::ParseAction(const std::vector<Value> &args)
 {
     JsonReader reader;
@@ -439,3 +451,5 @@ void TableWindow::ParseAction(const std::vector<Value> &args)
         }
     }
 }
+
+*/

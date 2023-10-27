@@ -1,8 +1,6 @@
 #include "ConsoleWindow.h"
 
 #include <stdio.h>
-#include <SDL.h>
-
 
 ConsoleWindow::ConsoleWindow()
 {

@@ -3,16 +3,11 @@
 
 #include "Gui.h"
 #include "ConsoleWindow.h"
-#include "CodeEditor.h"
-#include "ProcessEngine.h"
-#include "ImageWindow.h"
-#include "TaskListWindow.h"
-#include "Settings.h"
 #include "TableWindow.h"
 #include "CourseWindow.h"
 #include "Pool.h"
-
-class MainWindow
+#include "Zebra7500.h"
+class MainWindow : public IDeviceEvent
 {
 public:
     MainWindow();
@@ -21,17 +16,22 @@ public:
     void Initialize();
     void Loop();
 
+    // From IDeviceEvent
+    virtual void TagEvent(int64_t id, uint64_t timestamp) override;
+    virtual void Message(const std::string &message) override;
+
 private:
-    ProcessEngine mEngine;
+
     Gui gui;
-    ImageWindow imgWindow;
+
+    Zebra7500 m_zebra;
+
     ConsoleWindow console;
-    CodeEditor editor;
-    TaskListWindow taskList;
-    Settings mSettings;
     TableWindow tableWindow;
 
     CourseWindow courseWindow;
+
+    
 
     char mBufAddress[200];
     char mBufReceivePath[200];
@@ -52,7 +52,7 @@ private:
     void LoadParams();
 
     void SetupMainMenuBar();
-    void EngineEvents(int signal, const std::vector<Value> &args);
+   
     void ShowOptionsWindow();
     bool ShowQuitConfirm();
     bool ExecutePing(const std::string &host);

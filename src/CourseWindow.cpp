@@ -1,20 +1,19 @@
 #include "CourseWindow.h"
 #include "imgui.h"
-#include "JsonReader.h"
+
 #include "Util.h"
 
 #include "Log.h"
 
-CourseWindow::CourseWindow(IProcessEngine &engine)
-    : mEngine(engine)
+CourseWindow::CourseWindow()
 {
     mHttpThread = std::thread(&CourseWindow::RunHttp, this);
 }
 
 CourseWindow::~CourseWindow()
 {
-    HttpClient::Request req;
-    req.quit = true;
+    HttpOrder req;
+    req.cmd = "quit";
     mHttpQueue.Push(req);
 
     if (mHttpThread.joinable())
@@ -26,13 +25,14 @@ CourseWindow::~CourseWindow()
 void CourseWindow::RunHttp()
 {
     bool quit = false;
-    HttpClient::Request req;
+    HttpOrder req;
     while(!quit)
     {
         if (mHttpQueue.TryPop(req))
         {
-            if (!req.quit)
+            if (req.cmd != "quit")
             {
+                /*
                 std::string response = mHttpClient.ExecuteAsync(req);
 
                 std::cout << response << std::endl;
@@ -94,8 +94,12 @@ void CourseWindow::RunHttp()
                 {
                     TLogError("[HTTP] Parse JSON reply error");
                 }
+                */
             }
-            quit = req.quit;
+            else
+            {
+                quit = true;
+            }
         }
     }
 }
@@ -103,7 +107,7 @@ void CourseWindow::RunHttp()
 bool CourseWindow::GetCourse(const std::string &host, const std::string &path, uint16_t port)
 {
     bool success = false;
-
+/*
     std::string response;
     HttpClient::Request req;
 
@@ -114,7 +118,7 @@ bool CourseWindow::GetCourse(const std::string &host, const std::string &path, u
     req.secured = false;
 
     mHttpQueue.Push(req);
-
+*/
     return success;
 }
 

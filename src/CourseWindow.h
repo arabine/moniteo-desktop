@@ -1,20 +1,24 @@
 #ifndef COURSE_WINDOW_H
 #define COURSE_WINDOW_H
 
-#include "Value.h"
-#include "IProcessEngine.h"
+
 #include <vector>
 #include <map>
 #include <mutex>
 #include <set>
 
-#include "http-client.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <httplib.h>
+
 #include "ThreadQueue.h"
+
+#include "HttpOrder.h"
 
 class CourseWindow
 {
 public:
-    CourseWindow(IProcessEngine &engine);
+    CourseWindow();
     ~CourseWindow();
     void Draw(const char *title, bool *p_open);
     void SetServer(const std::string &server, const std::string &path, uint16_t port)
@@ -44,10 +48,7 @@ private:
         uint32_t birthYear;
    };
 
-   IProcessEngine &mEngine;
-
-   HttpClient mHttpClient;
-   ThreadQueue<HttpClient::Request> mHttpQueue;
+   ThreadQueue<HttpOrder> mHttpQueue;
    std::thread mHttpThread;
 
    std::string mServer;
