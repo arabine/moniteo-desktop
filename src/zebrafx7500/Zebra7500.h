@@ -18,6 +18,10 @@ public:
 class Zebra7500
 {
 public:
+    const int OrderCOnnect = 23;
+    const int OrderStart = 60;
+    const int OrderQuit = 102;
+
     struct Device{
         std::string name;
         std::string conn_channel;
@@ -36,6 +40,7 @@ public:
     bool Initialize();
     void Start();
      void Stop();
+    void Connect();
     void InventoryLoop();
 
     void CheckCapabilities();

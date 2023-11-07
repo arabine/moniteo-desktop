@@ -40,3 +40,7 @@ imgui.ini
 moniteo.exe
 
 moniteo.json
+
+import/
+
+build-src-System_Qt5_15_8-Debug/

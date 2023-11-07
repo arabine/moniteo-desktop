@@ -52,6 +52,9 @@ set(SRCS
 
     Gui.h
     Gui.cpp
+    sqlite3.c
+
+    usersdb.h usersdb.cpp
 
     imgui/imgui.cpp
     imgui/imgui_draw.cpp
@@ -59,8 +62,6 @@ set(SRCS
     imgui/imgui_widgets.cpp
     imgui/backends/imgui_impl_glfw.cpp
     imgui/backends/imgui_impl_opengl2.cpp
-    ImGuiColorTextEdit/TextEditor.cpp
-    ImGuiColorTextEdit/TextEditor.h
     ImGuiFileDialog/ImGuiFileDialog.cpp
 
     zebrafx7500/Zebra7500.cpp
@@ -83,17 +84,27 @@ add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GL3W)
 add_definitions(-Dcimg_display=0)
 
 
+#===========================================================================================
+# LINUX BUILD
+#===========================================================================================
+
 if (UNIX)
 target_link_libraries(${MONITEO_PROJECT}
-    manolab
-    icl
     dl
-    SDL2
-    pthread
+    glfw
     udev
     OpenGL::GL
     ssl crypto
+    rfidapi32 pthread  z xml2 rt ltk ssh2
 )
+
+target_link_directories(${MONITEO_PROJECT} PUBLIC zebrafx7500/libs/linux)
+
+#set_target_properties(${MONITEO_PROJECT} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+
+#===========================================================================================
+# WINDOWS BUILD
+#===========================================================================================
 elseif(WIN32)
 
 

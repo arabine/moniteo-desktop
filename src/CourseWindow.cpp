@@ -1,5 +1,5 @@
 #include "CourseWindow.h"
-#include "imgui.h"
+#include "Gui.h"
 
 #include "Util.h"
 

@@ -37,7 +37,12 @@ void Zebra7500::SetConfiguration(const Device &dev)
 
 void Zebra7500::Start()
 {
-    mLoopQueue.Push(60);
+    mLoopQueue.Push(Zebra7500::OrderStart);
+}
+
+void Zebra7500::Connect()
+{
+    mLoopQueue.Push(Zebra7500::OrderCOnnect);
 }
 
 
@@ -141,27 +146,8 @@ bool Zebra7500::Initialize()
 {
     if (!mInitialized)
     {
-        std::string channel = m_dev.conn_channel;
-        wcscpy(hostName, Util::ToWString(channel).c_str());
-
-        RFID_STATUS rfidStatus = ConnectReader(&readerHandle, hostName, 5084);
-        if(RFID_API_SUCCESS == rfidStatus)
-        {
-            TAG_STORAGE_SETTINGS tagStorageSettings;
-
-             m_ev.Message("Connected to RFID reader success!");
-
-            RFID_GetTagStorageSettings(readerHandle,&tagStorageSettings);
-            tagStorageSettings.discardTagsOnInventoryStop = TRUE;
-            RFID_SetTagStorageSettings(readerHandle,&tagStorageSettings);
-
-            CheckCapabilities();
-
-            HandleResult(readerHandle, RFID_RegisterEventNotificationCallback(readerHandle, gRfidEventTypes,  MAX_EVENTS, (RfidEventCallbackFunction) ZebraRfidEventCallback, NULL, NULL));
-
-            mThread = std::thread(&Zebra7500::InventoryLoop, this);
-            mInitialized = true;
-        }
+        mThread = std::thread(&Zebra7500::InventoryLoop, this);
+        mInitialized = true;
     }
 
     return mInitialized;
@@ -250,14 +236,7 @@ void Zebra7500::InventoryLoop()
 //    bool start = false;
 
     TAG_DATA* pTagData = NULL;
-    pTagData = RFID_AllocateTag(readerHandle);
-    if(NULL == pTagData)
-    {
-        // Handle memory allocation failure
-        // Optimally, Tag Allocation can be done once and pointer reused till disconnection.
-        wprintf(L"RFID_AllocateTag Failed.");
-        return;
-    }
+
 
     do
     {
@@ -268,7 +247,46 @@ void Zebra7500::InventoryLoop()
             {
                 loop = false;
             }
-            else if (order == 60)
+
+            else if (order == Zebra7500::OrderCOnnect)
+            {
+
+                std::string channel = m_dev.conn_channel;
+                wcscpy(hostName, Util::ToWString(channel).c_str());
+
+                RFID_STATUS rfidStatus = ConnectReader(&readerHandle, hostName, 5084);
+                if(RFID_API_SUCCESS == rfidStatus)
+                {
+                    TAG_STORAGE_SETTINGS tagStorageSettings;
+
+                    m_ev.Message("Connected to RFID reader success!");
+
+                    RFID_GetTagStorageSettings(readerHandle,&tagStorageSettings);
+                    tagStorageSettings.discardTagsOnInventoryStop = TRUE;
+                    RFID_SetTagStorageSettings(readerHandle,&tagStorageSettings);
+
+                    CheckCapabilities();
+
+                    HandleResult(readerHandle, RFID_RegisterEventNotificationCallback(readerHandle, gRfidEventTypes,  MAX_EVENTS, (RfidEventCallbackFunction) ZebraRfidEventCallback, NULL, NULL));
+
+
+                    pTagData = RFID_AllocateTag(readerHandle);
+                    if(NULL == pTagData)
+                    {
+                        // Handle memory allocation failure
+                        // Optimally, Tag Allocation can be done once and pointer reused till disconnection.
+                        m_ev.Message("RFID_AllocateTag Failed.");
+                        return;
+                    }
+                }
+                else
+                {
+                    m_ev.Message("Error: failed to Connect to RFID reader");
+                }
+
+            }
+
+            else if (order == Zebra7500::OrderStart)
             {
 //                start = true;
 

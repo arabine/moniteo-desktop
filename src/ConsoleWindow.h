@@ -1,7 +1,7 @@
 #ifndef CONSOLEWINDOW_H
 #define CONSOLEWINDOW_H
 
-#include "imgui.h"
+#include "Gui.h"
 #include <string>
 #include <mutex>
 #include <vector>

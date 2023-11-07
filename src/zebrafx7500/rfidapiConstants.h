@@ -773,6 +773,7 @@ typedef enum _ANTENNA_STOP_TRIGGER_TYPE
   ANTENNA_STOP_TRIGGER_TYPE_N_ATTEMPTS=1, /**<  Stop after a specified number of attempts*/  
   ANTENNA_STOP_TRIGGER_TYPE_DURATION_MILLISECS=2, /**<  Stop after a specified Millsecond duration*/
   ANTENNA_STOP_TRIGGER_TYPE_DURATION_SECS=3, /**<  Stop after a specified Second duration*/
+  ANTENNA_STOP_TRIGGER_TYPE_DURATION_MILLISECS_ONE_ROUND=4, /**<  Stop after a specified Millsecond duration Or One round*/
 }ANTENNA_STOP_TRIGGER_TYPE;
 
 /** 

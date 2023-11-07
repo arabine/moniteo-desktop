@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include <filesystem>
 #include <Util.h>
+
+
 #include "ImGuiFileDialog.h"
 #include "imgui_internal.h"
 
@@ -126,6 +128,7 @@ void MainWindow::SetupMainMenuBar()
 {
     bool showAboutPopup = false;
     bool showParameters = false;
+    bool showImportDialog = false;
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("File"))
@@ -134,7 +137,12 @@ void MainWindow::SetupMainMenuBar()
             {
                 showParameters = true;
             }
-            ImGui::EndMenu();
+
+            if (ImGui::MenuItem("Importer"))
+            {
+                showImportDialog = true;
+              }
+             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Help"))
@@ -158,6 +166,31 @@ void MainWindow::SetupMainMenuBar()
     {
         ImGui::OpenPopup("Options");
     }
+
+    if (showImportDialog)
+    {
+        // open Dialog Simple
+        ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".csv", ".", 1, nullptr, ImGuiFileDialogFlags_Modal);
+
+    }
+
+    // display
+    if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey"))
+    {
+        // action if OK
+        if (ImGuiFileDialog::Instance()->IsOk())
+        {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            // action
+
+            m_db.ImportFile(filePathName);
+        }
+
+        // close
+        ImGuiFileDialog::Instance()->Close();
+    }
+
 
     // Always center this window when appearing
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -198,7 +231,7 @@ void MainWindow::Initialize()
     d.options = "";
     m_zebra.SetConfiguration(d);
     m_zebra.Initialize();
-    m_zebra.Start();
+    m_zebra.Connect();
 
     LoadParams();
 }

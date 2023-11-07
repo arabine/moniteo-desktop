@@ -1,4 +1,4 @@
-/*                Copyrights ©2010-2016 Symbol Technologies LLC
+/*                Copyrights ©2010-2020 Zebra Technologies Corp.
 *                           All rights reserved
 * 
 *  
@@ -1328,7 +1328,9 @@ typedef struct _ANTENNA_RF_CONFIG
 	UINT16 transmitPort;/**<Transmit port of the Antenna. transmitPort field should be used only if the reader supports AntennaRFConfigSupported capability*/
 	UINT16 receivePort;/**< Receive port of the Antenna.  receivePort field should be used only only if the reader supports AntennaRFConfigSupported capability*/
 	ANTENNA_STOP_TRIGGER antennaStopTrigger;/**< Antenna stop trigger configuration. antennaStopTrigger field should be used only if the reader supports AntennaRFConfigSupported capability*/
-	LPVOID lpReserved[32]; /**<  Reserved for future.*/
+	UINT16 extendedOnTimeMicroseconds; /**< Delay after C1G2 select command in microseconds */
+	UINT16 reserved;
+	LPVOID lpReserved[31]; /**<  Reserved for future.*/
 } ANTENNA_RF_CONFIG, *LPANTENNA_RF_CONFIG;
 
 
