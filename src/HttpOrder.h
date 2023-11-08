@@ -3,4 +3,5 @@
 
 struct HttpOrder {
     std::string cmd;
+    std::string data;
 };

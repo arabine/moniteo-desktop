@@ -10,6 +10,7 @@
 
 #include "HttpOrder.h"
 #include "ThreadQueue.h"
+#include "IAppEvent.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -18,11 +19,13 @@
 class TableWindow
 {
 public:
-    TableWindow();
+    TableWindow(IAppEvent &app);
     ~TableWindow();
     void Draw(const char *title, bool *p_open);
 
   //  void ParseAction(const std::vector<Value> &args);
+
+   void TagEvent(const Tag &t);
 
     void SetServer(const std::string &server, const std::string &path, uint16_t port)
     {
@@ -64,6 +67,8 @@ private:
         }
     };
 
+    IAppEvent &m_app;
+    
     std::map<int64_t, Entry> mTable;
     std::mutex mMutex;
     int64_t mWindow = 10000;
@@ -86,14 +91,14 @@ private:
 
     // clé: numéro de dossard
     // Valeur: catégorie
-    std::map<uint32_t, std::string> mDossards;
+    std::map<int64_t, std::string> mDossards;
 
     bool mSendToCloud = false;
     bool mSending = false;
 
     // clé: numéro de dossard
     // Valeur: nombre de tours max
-    std::map<uint32_t, uint32_t> mToursMax;
+    std::map<int64_t, uint32_t> mToursMax;
 
     void RefreshWindowParameter();
     void SendToServer(const std::string &body);

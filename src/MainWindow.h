@@ -7,7 +7,9 @@
 #include "CourseWindow.h"
 #include "Pool.h"
 #include "Zebra7500.h"
-class MainWindow : public IDeviceEvent
+#include "IAppEvent.h"
+
+class MainWindow : public IDeviceEvent, public IAppEvent
 {
 public:
     MainWindow();
@@ -18,6 +20,8 @@ public:
 
     // From IDeviceEvent
     virtual void TagEvent(int64_t id, uint64_t timestamp) override;
+
+    // From IAppMesssage
     virtual void Message(const std::string &message) override;
 
 private:

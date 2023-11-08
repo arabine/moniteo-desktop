@@ -18,8 +18,8 @@
 
 static ThreadQueue<int> mLoopQueue;
 
-Zebra7500::Zebra7500(IDeviceEvent &ev)
-    : m_ev(ev)
+Zebra7500::Zebra7500(IAppEvent &app, IDeviceEvent &ev)
+    : m_app(app), m_ev(ev)
 {
 
 }
@@ -108,7 +108,7 @@ void Zebra7500::CheckCapabilities()
 //    wprintf(L"\nEnter ReceiveSensitivityIndex  value range 0-%d   ", readerCaps.receiveSensitivtyTable.numValues-1);
 
     std::string log = "ReceiveSensitivityIndex  value range 0-" + std::to_string(readerCaps.receiveSensitivtyTable.numValues-1);
-    m_ev.Message(log);
+    m_app.Message(log);
 
     rfidStatus = RFID_GetAntennaConfig(readerHandle, antennaID, &receiveSensitivityIndex,
         &transmitPowerIndex, &transmitFrequencyIndex);
@@ -118,7 +118,7 @@ void Zebra7500::CheckCapabilities()
                 ", TransmitPowerIndex=" + std::to_string(transmitPowerIndex)+
                 ", TransmitFrequencyIndex=" + std::to_string(transmitFrequencyIndex);
 
-        m_ev.Message(log);
+        m_app.Message(log);
 //        wprintf(L"\nReceiveSensitivityIndex = %d", receiveSensitivityIndex);
 //        wprintf(L"\nTransmitPowerIndex = %d", transmitPowerIndex);
 //        wprintf(L"\nTransmitFrequencyIndex = %d", transmitFrequencyIndex);
@@ -149,7 +149,7 @@ bool Zebra7500::Initialize()
         {
             TAG_STORAGE_SETTINGS tagStorageSettings;
 
-             m_ev.Message("Connected to RFID reader success!");
+             m_app.Message("Connected to RFID reader success!");
 
             RFID_GetTagStorageSettings(readerHandle,&tagStorageSettings);
             tagStorageSettings.discardTagsOnInventoryStop = TRUE;

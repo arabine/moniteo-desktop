@@ -25,7 +25,8 @@ static const char gDefaultSendPath[] = "/api/v1/data/downlink";
 
 
 MainWindow::MainWindow()
-    : m_zebra(*this)
+    : m_zebra(*this, *this)
+    , tableWindow(*this)
 {
     Log::EnableLog(false);
 
@@ -377,15 +378,21 @@ bool MainWindow::ShowQuitConfirm()
     return quitRequest;
 }
 
-/*
-auto start = std::chrono::system_clock::now();
-std::default_random_engine rng(std::random_device{}());
-std::uniform_real_distribution<double> dist_players(810, 900);  //(min, max)
 
-std::uniform_real_distribution<double> dist_delay(1000, 10000);  //(min, max)
+auto start = std::chrono::system_clock::now();
+
+int randomValueBetween(int min, int max) {
+    std::random_device rd;  // Pour obtenir une seed aléatoire
+    std::mt19937 generator(rd());  // Mersenne Twister 19937 comme générateur
+    std::uniform_int_distribution<int> distribution(min, max - 1);  // Distribution uniforme
+
+    return distribution(generator);
+}
+
+
 
 typedef std::chrono::duration<double, std::milli> duration;
-*/
+
 void MainWindow::Loop()
 {
     // Main loop
@@ -394,7 +401,7 @@ void MainWindow::Loop()
     // do some work
     // record end time
 
-   // double next = dist_delay(rng);
+    double next = dist_delay(rng);
 
     while (!done)
     {
@@ -422,7 +429,7 @@ void MainWindow::Loop()
 
         gui.EndFrame();
 
-        /*
+        
         // -------------------- Simulation
         auto end = std::chrono::system_clock::now();
         duration diff = end - start;
@@ -432,13 +439,12 @@ void MainWindow::Loop()
             next = dist_delay(rng);
 
             // Joueur au hasard
-            int p = dist_players(rng);
-            std::vector<Value> args;
-            args.push_back(std::string("{\"tag\": " + std::to_string(p) + ", \"time\": " + std::to_string(Util::CurrentTimeStamp64()) + "}"));
-            tableWindow.ParseAction(args);
-        }
-
-        */
+            int p = randomValueBetween(1, 60);
+            Tag t;
+            t.id = p;
+            t.timestamp = Util::CurrentTimeStamp64();
+            tableWindow.TagEvent(t);
+        }       
 
         // -------------------- Simulation END
     }

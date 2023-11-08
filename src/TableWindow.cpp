@@ -10,7 +10,8 @@
 
 //static thread_pool pool;
 
-TableWindow::TableWindow()
+TableWindow::TableWindow(IAppEvent &app)
+    : m_app(app)
 {
     timer.reset();
 
@@ -43,7 +44,7 @@ TableWindow::TableWindow()
 
     RefreshWindowParameter();
 
-    mHttpThread = std::thread(&TableWindow::RunHttp, this);
+    mHttpThread = std::thread(&TableWindow::RunHttp, this);    
 }
 
 TableWindow::~TableWindow()
@@ -70,7 +71,7 @@ void TableWindow::RunHttp()
     HttpOrder req;
 
         // HTTP
-    httplib::Client cli("http://cpp-httplib-server.yhirose.repl.co");
+    httplib::Client cli("https://canap_:plop1234$@couchdb-canap.alwaysdata.net:6984");
 
     while(!quit)
     {
@@ -80,12 +81,15 @@ void TableWindow::RunHttp()
             {
                 quit = true;
             }
-            else
+            else if (req.cmd == "push")
             {
-                auto res = cli.Get("/hi");
+                auto res = cli.Get("/canap_test1/course_cat1");
                 res->status;
                 res->body;
-                std::cout << res->body << std::endl;
+                m_app.Message(res->body);
+
+                nlohmann::json j = nlohmann::json::parse(res->body);
+
                 mSending = false;
             }
             
@@ -95,9 +99,14 @@ void TableWindow::RunHttp()
 
 void TableWindow::SendToServer(const std::string &body)
 {
-        // HTTP
-    httplib::Client cli("http://cpp-httplib-server.yhirose.repl.co");
+    HttpOrder req;
+    req.cmd = "push";
+    req.data = body;
+    mHttpQueue.Push(req);
 
+        // HTTP
+
+        
     /*
     HttpClient::Request req;
 
@@ -242,17 +251,6 @@ void TableWindow::Draw(const char *title, bool *p_open)
             std::map<int64_t, Entry> tableCopy = mTable;
             mMutex.unlock();
             SendToServer(ToJson(tableCopy, startTime));
-/*
-            pool.push_task([&] () {
-          //  mPool.enqueue_task([&] () {
-                mMutex.lock();
-                std::map<int64_t, Entry> tableCopy = mTable;
-                mMutex.unlock();
-
-               SendToServer(ToJson(tableCopy, startTime), mServer, mPath, mPort);
-               sendInAction = false;
-            });
-            */
         }
     }
 
@@ -379,77 +377,66 @@ void TableWindow::Draw(const char *title, bool *p_open)
 
     ImGui::End();
 }
-/*
-void TableWindow::ParseAction(const std::vector<Value> &args)
+
+void TableWindow::TagEvent(const Tag &t)
 {
-    JsonReader reader;
-    JsonValue json;
+    Entry e;
+    e.tag = t.id;
 
-    if (args.size() > 0)
+    // on récupère la catégorie et le nombre de tours de ce dossard (indiqué par le tag) 
+    if ((mDossards.count(e.tag) > 0) && (mToursMax.count(e.tag) > 0))
     {
-        if (reader.ParseString(json, args[0].GetString()))
+        std::string category = mDossards[e.tag];
+        std::uint32_t tours_max = mToursMax[e.tag];
+        if (mCategories.count(category) > 0)
         {
-            Entry e;
-            e.tag = json.FindValue("tag").GetInteger64();
-            int64_t time = json.FindValue("time").GetInteger64();
-
-            // on récupère la catégorie et le nombre de tours de ce dossard (indiqué par le tag) 
-            if ((mDossards.count(e.tag) > 0) && (mToursMax.count(e.tag) > 0))
+            if (mCategories[category])
             {
-                std::string category = mDossards[e.tag];
-                std::uint32_t tours_max = mToursMax[e.tag];
-                if (mCategories.count(category) > 0)
+                mMutex.lock();
+
+                if (mTable.size() == 0)
                 {
-                    if (mCategories[category])
+                    mStartTime = t.timestamp;
+                }
+
+                // Already detected in the past?
+                if (mTable.count(e.tag) > 0)
+                {
+                    std::vector<int64_t> &l = mTable[e.tag].laps;
+                    // !!!! IMPORTANT !!!  On a toujours un passage en plus du nombre max de tours à effectuer
+                    // Ce passage en plus, c'est le départ !
+                    if ((l.size() > 0) && (l.size() <= tours_max))
                     {
-                        mMutex.lock();
+                        int64_t diff =  t.timestamp - l[l.size() - 1];
 
-                        if (mTable.size() == 0)
+                        if (diff > mWindow)
                         {
-                            mStartTime = time;
+                            mTable[e.tag].laps.push_back(t.timestamp);
                         }
-
-                        // Already detected in the past?
-                        if (mTable.count(e.tag) > 0)
-                        {
-                            std::vector<int64_t> &l = mTable[e.tag].laps;
-                            // !!!! IMPORTANT !!!  On a toujours un passage en plus du nombre max de tours à effectuer
-                            // Ce passage en plus, c'est le départ !
-                            if ((l.size() > 0) && (l.size() <= tours_max))
-                            {
-                                int64_t diff = time - l[l.size() - 1];
-
-                                if (diff > mWindow)
-                                {
-                                    mTable[e.tag].laps.push_back(time);
-                                }
-                            }
-
-                        }
-                        else
-                        {
-                            e.laps.push_back(time);
-                            mTable[e.tag] = e;
-                        }
-
-                        mMutex.unlock();
                     }
-                    else
-                    {
-                        TLogError("Catégorie " + category + " interdite");
-                    }
+
                 }
                 else
                 {
-                    TLogError("Catégorie inconnue: " + category);
+                    e.laps.push_back(t.timestamp);
+                    mTable[e.tag] = e;
                 }
+
+                mMutex.unlock();
             }
             else
             {
-                TLogError("Dossard inconnu: " + std::to_string(e.tag));
+                TLogError("Catégorie " + category + " interdite");
             }
         }
+        else
+        {
+            TLogError("Catégorie inconnue: " + category);
+        }
+    }
+    else
+    {
+        TLogError("Dossard inconnu: " + std::to_string(e.tag));
     }
 }
 
-*/

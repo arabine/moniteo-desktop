@@ -7,12 +7,12 @@
 
 #include "EventLoop.h"
 #include "Util.h"
+#include "IAppEvent.h"
 
 class IDeviceEvent
 {
 public:
     virtual void TagEvent(int64_t id, uint64_t timestamp) = 0;
-    virtual void Message(const std::string &message) = 0;
 };
 
 class Zebra7500
@@ -28,7 +28,7 @@ public:
 
         Device() = default;
     };
-    Zebra7500(IDeviceEvent &ev);
+    Zebra7500(IAppEvent &app, IDeviceEvent &ev);
     virtual ~Zebra7500();
 
     void SetConfiguration(const Device &dev);
@@ -41,6 +41,7 @@ public:
     void CheckCapabilities();
 
 private:
+    IAppEvent &m_app;
     IDeviceEvent &m_ev;
     RFID_HANDLE32 readerHandle;
     READER_CAPS readerCaps;
