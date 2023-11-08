@@ -12,8 +12,11 @@
 #include "ThreadQueue.h"
 #include "IAppEvent.h"
 
+
+#ifdef USE_WINDOWS_OS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#endif
 #include <httplib.h>
 
 class TableWindow
@@ -73,7 +76,7 @@ private:
     std::mutex mMutex;
     int64_t mWindow = 10000;
     int64_t mStartTime = 0;
-    char buf2[10];
+    char buf2[50];
     std::string mServer;
     std::string mPath;
     uint16_t mPort;

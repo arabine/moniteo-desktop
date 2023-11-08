@@ -52,7 +52,7 @@ typedef char CHAR;
 typedef unsigned char       BYTE;
 typedef unsigned short      WORD;
 typedef BYTE				BOOLEAN;
-#define WINAPI //__attribute__((stdcall))
+#define WINAPI __attribute__((stdcall))
 	typedef int64_t    INT64;
 	typedef uint64_t	RFID_HANDLE64;
 	typedef uint64_t    UINT64;

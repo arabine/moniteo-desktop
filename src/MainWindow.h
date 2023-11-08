@@ -7,9 +7,16 @@
 #include "CourseWindow.h"
 #include "Pool.h"
 #include "Zebra7500.h"
+<<<<<<< HEAD
 #include "IAppEvent.h"
 
 class MainWindow : public IDeviceEvent, public IAppEvent
+=======
+
+#include "usersdb.h"
+
+class MainWindow : public IDeviceEvent
+>>>>>>> main
 {
 public:
     MainWindow();
@@ -25,6 +32,7 @@ public:
     virtual void Message(const std::string &message) override;
 
 private:
+    UsersDb m_db;
 
     Gui gui;
 

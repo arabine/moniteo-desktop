@@ -7,8 +7,11 @@
 #include <mutex>
 #include <set>
 
+#ifdef USE_WINDOWS_OS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#endif
+
 #include <httplib.h>
 
 #include "ThreadQueue.h"
